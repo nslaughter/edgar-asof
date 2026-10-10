@@ -36,9 +36,10 @@ As in [`fetching.md`](fetching.md#3-statement-ids). The area here is
 - **TIME-1** (rule) From a filing's header, the library reads
   `ACCEPTANCE-DATETIME` as its 14 digits, `YYYYMMDDHHMMSS`, unchanged
   ([SRC-1]).
-- **TIME-2** (rule) From `submissions`' `filings.recent`, the library reads
-  each filing's `acceptanceDateTime` as the string given, unchanged, such
-  as `2025-10-31T14:01:26.000Z` ([SRC-2]).
+- **TIME-2** (rule) From `submissions`' `filings.recent` and its further
+  files, the library reads each filing's `acceptanceDateTime` as the string
+  given, unchanged, such as `2025-10-31T14:01:26.000Z` ([SRC-2],
+  [SRC-12]).
 - **TIME-3** (rule) Each raw time keeps its source, `header` or
   `submissions`; the accession number of its filing; and the URL and
   `sha256` of the cached body it was read from
@@ -62,6 +63,18 @@ As in [`fetching.md`](fetching.md#3-statement-ids). The area here is
   name, such as `America/New_York`, and returns nothing for a filing
   without a header time. It has no default zone. A local time that occurs
   twice, when daylight saving time ends, is read as the earlier instant.
+- **TIME-9** (rule) The library has no default interpreter. Wherever it
+  turns acceptance times into instants, the caller passes an interpreter,
+  and without one the library raises an error.
+
+No interpreter is right for every filing yet. Read as UTC, `submissions`'
+time falls outside EDGAR's hours for most of Apple's filings, and for most
+of Walmart's before June 2023, but not for Microsoft's ([SRC-13]). Eight
+hours earlier, read as Eastern Time, nearly all of them fall within those
+hours, as the header's digits for Apple's three stored filings do
+([SRC-2]). The header's digits read as Eastern Time ([TIME-8]) may become
+the default, in a minor version, once a finding compares more headers with
+`submissions`.
 
 ## 5. Index
 
@@ -75,37 +88,11 @@ As in [`fetching.md`](fetching.md#3-statement-ids). The area here is
 | TIME-6 | rule | tests | An interpreter gives an instant or nothing, and the caller can pass one. |
 | TIME-7 | rule | tests | An interpreter reads `submissions`' time as the UTC instant it states. |
 | TIME-8 | rule | tests | An interpreter reads the header's digits in a zone the caller names. |
+| TIME-9 | rule | tests | There is no default interpreter; the caller passes one. |
 
 ## 6. Open questions
 
-1. **Which interpreter "as of T" uses when the caller passes none.**
-   - **`submissions`' time ([TIME-7])** needs no request per filing, since
-     one `submissions` and its further files list all of a company's
-     filings. But for Apple it is 8 hours later than the header's digits
-     ([SRC-2]). It also puts 13 of the 44 Apple filings in
-     `filings.recent` that have values, all filed from 2015 to 2019, on
-     the day after their filing date ([SRC-9]).
-   - **The header's digits as US Eastern time ([TIME-8])** agree with
-     `submissions` for Microsoft and Walmart ([SRC-2]), but need one
-     request per filing, for its header. The SEC says EDGAR accepts
-     filings from 6:00 a.m. to 10:00 p.m. Eastern Time on business days
-     ([EDGAR Filer Manual, Volume II, §2.3.1][hours]). A count of the stored
-     `filings.recent` puts 668 of Apple's 1,000 `acceptanceDateTime` values
-     outside those hours, read as the UTC instants they state and converted
-     to Eastern Time, 616 of them after 10 p.m., but
-     only 2 of Microsoft's 1,002 and none of Walmart's 1,000. That suggests
-     the header's digits are right for Apple, but the count isn't yet a
-     finding in `edgar-data-pipeline`.
-   - **No default:** the caller always chooses. A default can be added
-     later in a minor version, but changing one changes answers.
-
-   Proposed default: no default, until a finding settles which time is
-   right for Apple.
-2. **`submissions`' further files.** [TIME-2] reads only `filings.recent`.
-   The further files that `submissions` names in `filings.files` list the
-   older filings ([SRC-10]), but no finding yet shows that they give
-   `acceptanceDateTime` the same way. Once one does, [TIME-2] extends to
-   them in a minor version.
+None.
 
 ## 7. Changes to this document
 
@@ -116,11 +103,8 @@ retired statement stays in the index.
 
 [0009]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/docs/decisions/0009-read-edgar-through-a-public-point-in-time-library.md
 [Times]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/docs/design.md#times
-[hours]: https://www.sec.gov/files/edgar/filermanual/efmvol2-c2.pdf
 [SRC-1]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-2]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
-[SRC-9]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
-[SRC-10]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
-[TIME-2]: #3-raw-times
-[TIME-7]: #4-interpreters
+[SRC-12]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
+[SRC-13]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [TIME-8]: #4-interpreters

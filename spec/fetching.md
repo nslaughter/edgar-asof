@@ -29,6 +29,8 @@ Each guarantee holds because of the statements it lists.
    into one.** [CACHE-5].
 5. **Requests keep to the SEC's rules:** a user agent the caller supplies,
    and at most 5 requests a second from a process. [CLIENT-2], [CLIENT-7].
+6. **A read is repeatable.** It uses the version the cache holds, unless
+   the caller asks for a fresh fetch. [CACHE-8].
 
 ## 2. Terms
 
@@ -73,8 +75,8 @@ names an ID in the index.
   store's FETCH-1.
 - **CLIENT-2** (rule) Every request carries a `User-Agent` that the caller
   supplies, which must contain an `@`, following the SEC's sample of a name
-  and a contact address. The library ships none, and without one it
-  requests nothing.
+  and a contact address. The library ships none and reads none from the
+  environment or any file, and without one it requests nothing.
 - **CLIENT-3** (rule) No file in a cache contains the `User-Agent` or any
   other request header, as in the store's ID-1.
 - **CLIENT-4** (rule) Each request sends `Accept-Encoding: gzip`.
@@ -168,6 +170,11 @@ CACHE/
 - **CACHE-7** (rule) A URL's versions are the distinct `sha256` values among
   its records, numbered in the order each first appears, as in the store's
   VER-1.
+- **CACHE-8** (rule) A read uses the URL's latest version in the cache. It
+  fetches only when the cache holds no version of the URL, or when the
+  caller asks for a fresh fetch, which is conditional as [CLIENT-5] says.
+- **CACHE-9** (rule) The caller names the cache's directory. The library
+  has no default.
 
 ## 7. Where the cache departs from the store
 
@@ -181,8 +188,8 @@ CACHE/
 - **The caller supplies the user agent,** where the store's `snapshot.py`
   reads `SEC_USER_AGENT` from the environment or `.env.dev` (the store's
   FETCH-2 and FETCH-15). The library is called from programs the caller
-  writes, so the user agent is an argument
-  ([open question 3](#9-open-questions)).
+  writes, so the user agent is an argument, and the library reads none from
+  the environment ([CLIENT-2]).
 - **A failure is an error to the caller,** not a run's exit status (the
   store's FETCH-10), and a `403` stops the process's requests, not a run
   (the store's FETCH-9).
@@ -199,7 +206,7 @@ CACHE/
 | ID | Kind | Checked by | Statement |
 | --- | --- | --- | --- |
 | CLIENT-1 | rule | tests | Only `https` URLs of the library's feeds on `www.sec.gov` and `data.sec.gov`. |
-| CLIENT-2 | rule | tests | The caller's user agent is required and sent. |
+| CLIENT-2 | rule | tests | The caller's user agent is required and sent; none is read from the environment. |
 | CLIENT-3 | rule | tests | No request header is kept in a cache. |
 | CLIENT-4 | rule | tests | `Accept-Encoding: gzip` is sent. |
 | CLIENT-5 | rule | tests | The latest version's validators are sent. |
@@ -220,25 +227,12 @@ CACHE/
 | CACHE-5 | rule | tests | A snapshot store is read as a cache, and never fetched into. |
 | CACHE-6 | rule | tests | One process fetches into a cache at a time; readers skip an unfinished line. |
 | CACHE-7 | rule | tests | Versions are distinct bodies per URL, numbered by first appearance. |
+| CACHE-8 | rule | tests | A read uses the latest cached version, and fetches only when there is none or the caller asks. |
+| CACHE-9 | rule | tests | The caller names the cache's directory; there is no default. |
 
 ## 9. Open questions
 
-1. **Which version a read uses.** A read could use the URL's latest version
-   in the cache, and fetch only when the cache has none or the caller asks
-   for a fresh fetch. Or it could fetch whenever the latest version is
-   older than an age the caller sets. The first makes answers repeatable
-   and reads possible offline, but a caller who doesn't ask for a fresh
-   fetch gets what the cache last held. Proposed default: the first.
-2. **Where a cache lives by default.** The caller could always name the
-   directory. Or the library could default to a per-user cache directory,
-   which needs a dependency such as `platformdirs` to find it on each
-   platform. Proposed default: the caller names it, and there is no
-   default.
-3. **Whether the user agent can come from the environment.** Reading
-   `SEC_USER_AGENT` when the caller passes none would match
-   `edgar-data-pipeline` and suit short scripts, but the calling code
-   wouldn't show which user agent is sent. Proposed default: the caller
-   passes it, and the library reads no environment variable.
+None.
 
 ## 10. Changes to this document
 
@@ -261,6 +255,7 @@ retired statement stays in the index.
 [CLIENT-7]: #4-requests
 [CLIENT-8]: #4-requests
 [CLIENT-13]: #4-requests
+[CLIENT-5]: #4-requests
 [CLIENT-14]: #4-requests
 [CACHE-1]: #6-the-cache
 [CACHE-2]: #6-the-cache
@@ -269,3 +264,4 @@ retired statement stays in the index.
 [CACHE-5]: #6-the-cache
 [CACHE-6]: #6-the-cache
 [CACHE-7]: #6-the-cache
+[CACHE-8]: #6-the-cache
