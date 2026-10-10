@@ -23,6 +23,19 @@ it. The decision to build this library is recorded in
 Reading and parsing filing documents in general is out of scope;
 [edgartools](https://github.com/dgunning/edgartools) does that well.
 
+## Documents
+
+| Document | Holds |
+| --- | --- |
+| [`AGENTS.md`](AGENTS.md) | How agents and people work in this repository |
+| [`spec/fetching.md`](spec/fetching.md) | How the library requests EDGAR's feeds, and its cache |
+| [`spec/times.md`](spec/times.md) | Filings' acceptance times, as EDGAR gives them and as instants |
+
+Both specifications are drafts. The fact model and "as of T" come in a
+later specification, once
+[edgar-data-pipeline's investigation](https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md)
+records how restated values appear.
+
 ## EDGAR data
 
 Data read by this library comes from the U.S. Securities and Exchange
