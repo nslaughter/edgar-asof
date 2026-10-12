@@ -97,6 +97,130 @@ a body that says what changed and why. Commit each logical change
 separately. A pull request's description lists what changed, the checks
 run with their results, and anything deferred.
 
+The owner merges pull requests. Merge one only when the owner explicitly
+approves merging that specific pull request in the current conversation.
+The repository allows squash merges only, so the pull request's title and
+description become the commit on `main`: keep the description current as
+commits are added.
+
+No pull request is merged until the owner's iterative review has run on
+it, documentation-only ones included, as the owner chose on October 12,
+2026. The owner starts the review. Each of its reviews, the third
+included, is by a reviewer who didn't write or fix the change and doesn't
+share the context of whoever did. It runs in this order:
+
+1. Two reviews at the same time.
+2. Fixes: each finding is fixed, or declined with a reason, and answered
+   under it on the pull request.
+3. A third review of the fixes, when the first two reviews found anything
+   of medium or high severity or the fixes changed behavior or tests, and
+   only if the fixes pushed a change. Its findings are fixed or declined
+   the same way, which ends the review. Without a third review, the fixes
+   end it.
+
+Each review is posted on the pull request as a review of its own,
+numbered, even when it finds nothing, so the pull request shows which
+reviews ran. The owner's approval to merge comes after the review, never
+in place of it. If the review hasn't run, or hasn't ended, don't merge,
+even when the owner asks: say so, and stop.
+
+## Doing the next item
+
+When the owner asks for the next item, do the next task in the plan,
+`docs/plan.md`: one task, in one pull request. The request assigns that
+task and nothing beyond it.
+
+1. **Update `main`.** Fetch `origin`, and fast-forward the local `main` to
+   `origin/main`. Leave the main checkout on `main`, because other agents
+   may share it. If the update changed this file or the plan, read it
+   again before going on.
+2. **Find the task.** Go through the plan's tasks in order. The next item
+   is the first task that is:
+   - **not done:** the plan on `main` doesn't mark it done. The plan is
+     the progress record, and each task's pull request updates it.
+   - **not taken:** no open pull request names its ID in the title
+     (`gh pr list --state open`), and no branch names it
+     (`git branch --all --list '*/<id>-*'`, with the ID in lowercase). A
+     task is taken from the moment step 4 makes its branch.
+   - **ready to start:** each task it depends on is done. A specification
+     that relies on how EDGAR behaves needs the findings it cites, on
+     `edgar-data-pipeline`'s `main`, and code needs its specification. A
+     decision record it depends on must be accepted by the owner. An
+     approval it needs, such as a run against the SEC, is met only when
+     the owner gives it in the current conversation.
+
+   Never build on an unmerged branch. A task whose dependency is still in
+   an open pull request waits for it to merge.
+3. **Stop if nothing can start.** Make no branch and no change. Report
+   why, and what would unblock the next task: a pull request to merge, a
+   decision record to accept, an approval such as a run against the SEC,
+   or a finding `edgar-data-pipeline` still needs. When there is no plan,
+   or every task in it is done, the next step is for the owner to write or
+   extend it. Stop too when the documents contradict each other on the
+   task ([rules](#rules)).
+4. **Make a worktree.** Create the branch `<area>/<id>-<short-name>` from
+   `origin/main` in a git worktree of its own, outside the main checkout,
+   and run `uv sync` in it once the project is set up. `<id>` is the
+   task's ID in lowercase, so other agents see that the task is taken
+   (step 2). `<area>` is the directory the task mainly changes, such as
+   `spec`, `docs`, `src`, or `tests`.
+5. **Read for the task.** Follow [read these first](#read-these-first),
+   and read closely what the task names: the statements and their tests,
+   the findings and the stored versions they cite, and the decision
+   records.
+6. **Do the task, and only the task.** Keep the [rules](#rules): a change
+   to a specification is its own pull request, versioned as its document
+   says, and requests go to the SEC only when the owner asks for that run.
+   Don't change what a statement or an accepted decision record says
+   beyond what the task asks: that takes the owner's decision, so stop and
+   ask. A test of this task's work that the plan assigns to a later task
+   may be written now: say in the plan and the pull request that it was
+   written ahead of that task.
+7. **Record the details you settled.** Where the task left a detail open
+   and you decided it, write it where
+   [where documents go](#where-documents-go) puts it: a rule as a
+   statement in its spec, with the next unused ID in its area, and a
+   significant choice as a decision record. What EDGAR does isn't recorded
+   here: report it, for a finding in `edgar-data-pipeline`. In a code
+   task, a detail the specification leaves open is an ambiguity: stop and
+   report it instead ([rules](#rules)). List each detail you settled in
+   the pull request for the owner to confirm, with the alternative where
+   there was one. Each choice you leave for the owner is an open question
+   with a proposed default. Only the owner confirms a detail or accepts a
+   decision record.
+8. **Update the plan and the status lines.** Mark the task done in the
+   plan, with the date, and name the next task. Update the **Status** line
+   of each spec the task changed, with its version and the date. When
+   another open pull request also edits the plan, the later one to merge
+   rebases onto `origin/main` once the other merges: it keeps both tasks'
+   entries, and names the next task again.
+9. **Verify.** Run the checks in [commands](#commands): the format check,
+   the lint, the type check, and the tests, once the first code sets them
+   up. Check that each new test fails without the behavior it covers.
+   Requests to the SEC wait for the owner. Report only what you ran, with
+   its outcome.
+10. **Open the pull request.** Commit as
+    [commits and pull requests](#commits-and-pull-requests) says. Push the
+    branch, and open the pull request with `gh pr create`, under a title
+    that ends with the task's ID in parentheses. Its description gives:
+    - the task, and the plan it's in, linked;
+    - what changed;
+    - the details to confirm, linked to where step 7 recorded them, or
+      that there are none;
+    - the checks run, with their results;
+    - any tests written ahead of a later task;
+    - anything deferred, and the remaining work.
+
+    Don't merge it: it waits for the owner's iterative review, and then
+    the owner's approval
+    ([commits and pull requests](#commits-and-pull-requests)).
+11. **Report.** Finish with a short handoff: what changed, the evidence,
+    the limitations, and the remaining work, with the pull request's link
+    and the next task. Name what awaits the owner: the iterative review of
+    the pull request, this task's details to confirm, any decision record
+    the owner hasn't accepted, and any approval, such as a run against the
+    SEC.
+
 [0009]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/docs/decisions/0009-read-edgar-through-a-public-point-in-time-library.md
 [pipeline-agents]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/AGENTS.md
 [findings]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
