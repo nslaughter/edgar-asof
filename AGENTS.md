@@ -115,10 +115,10 @@ share the context of whoever did. It runs in this order:
 2. Fixes: each finding is fixed, or declined with a reason, and answered
    under it on the pull request.
 3. A third review of the fixes, when the first two reviews found anything
-   of medium or high severity or the fixes changed behavior or tests, and
-   only if the fixes pushed a change. Its findings are fixed or declined
-   the same way, which ends the review. Without a third review, the fixes
-   end it.
+   of medium or high severity or the fixes changed behavior, tests, or a
+   statement's meaning, and only if the fixes pushed a change. Its
+   findings are fixed or declined the same way, which ends the review.
+   Without a third review, the fixes end it.
 
 Each review is posted on the pull request as a review of its own,
 numbered, even when it finds nothing, so the pull request shows which
