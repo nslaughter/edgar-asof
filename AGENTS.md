@@ -52,8 +52,10 @@ docs/
   tests cite spec IDs, not findings.
 - **A significant choice gets a decision record,**
   `docs/decisions/NNNN-title.md`, numbered from 0001, with the context, the
-  options, the choice, and its consequences. A later record supersedes an
-  earlier one instead of editing it.
+  options, the choice, and its consequences. Its **Status** line says
+  Proposed until the owner accepts it, then Accepted, with the date, or
+  Superseded by a later record. Once a record merges, only its status
+  changes: a later record supersedes it instead of editing it.
 - **Never move or rename a spec.** `edgar-data-pipeline` and the commits on
   `main` link to its path.
 
@@ -145,9 +147,10 @@ task and nothing beyond it.
    - **ready to start:** each task it depends on is done. A specification
      that relies on how EDGAR behaves needs the findings it cites, on
      `edgar-data-pipeline`'s `main`, and code needs its specification. A
-     decision record it depends on must be accepted by the owner. An
-     approval it needs, such as a run against the SEC, is met only when
-     the owner gives it in the current conversation.
+     decision record it depends on must be Accepted, as its **Status**
+     line says ([where documents go](#where-documents-go)). An approval it
+     needs, such as a run against the SEC, is met only when the owner
+     gives it in the current conversation.
 
    Never build on an unmerged branch. A task whose dependency is still in
    an open pull request waits for it to merge.
@@ -171,7 +174,7 @@ task and nothing beyond it.
 6. **Do the task, and only the task.** Keep the [rules](#rules): a change
    to a specification is its own pull request, versioned as its document
    says, and requests go to the SEC only when the owner asks for that run.
-   Don't change what a statement or an accepted decision record says
+   Don't change what a statement or an Accepted decision record says
    beyond what the task asks: that takes the owner's decision, so stop and
    ask. A test of this task's work that the plan assigns to a later task
    may be written now: say in the plan and the pull request that it was
@@ -180,14 +183,14 @@ task and nothing beyond it.
    and you decided it, write it where
    [where documents go](#where-documents-go) puts it: a rule as a
    statement in its spec, with the next unused ID in its area, and a
-   significant choice as a decision record. What EDGAR does isn't recorded
-   here: report it, for a finding in `edgar-data-pipeline`. In a code
-   task, a detail the specification leaves open is an ambiguity: stop and
-   report it instead ([rules](#rules)). List each detail you settled in
-   the pull request for the owner to confirm, with the alternative where
-   there was one. Each choice you leave for the owner is an open question
-   with a proposed default. Only the owner confirms a detail or accepts a
-   decision record.
+   significant choice as a decision record, whose status is Proposed.
+   What EDGAR does isn't recorded here: report it, for a finding in
+   `edgar-data-pipeline`. In a code task, a detail the specification
+   leaves open is an ambiguity: stop and report it instead
+   ([rules](#rules)). List each detail you settled in the pull request for
+   the owner to confirm, with the alternative where there was one. Each
+   choice you leave for the owner is an open question with a proposed
+   default. Only the owner confirms a detail or accepts a decision record.
 8. **Update the plan and the status lines.** Mark the task done in the
    plan, with the date, and name the next task. Update the **Status** line
    of each spec the task changed, with its version and the date. When
@@ -218,8 +221,7 @@ task and nothing beyond it.
     the limitations, and the remaining work, with the pull request's link
     and the next task. Name what awaits the owner: the iterative review of
     the pull request, this task's details to confirm, any decision record
-    the owner hasn't accepted, and any approval, such as a run against the
-    SEC.
+    still Proposed, and any approval, such as a run against the SEC.
 
 [0009]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/docs/decisions/0009-read-edgar-through-a-public-point-in-time-library.md
 [pipeline-agents]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/AGENTS.md
