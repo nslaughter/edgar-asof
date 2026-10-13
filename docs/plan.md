@@ -55,11 +55,13 @@ carry their IDs.
 
 ## Later
 
+After the first release, so each task here waits for T9.
+
 | ID | Task | Depends on | Done |
 | --- | --- | --- | --- |
-| T10 | **Published cases for "as of T".** Cases with their inputs and answers, published with the library, so that `edgar-data-pipeline`'s query API is tested against them and both answer the same way ([0009], its T26). Split, when it's next, into a minor version of `spec/facts.md` and a building task. | T8 | |
-| T11 | **XBRL instances.** Every fact a filing reports, read from its XBRL instance with the parser that `edgar-data-pipeline`'s T12 chooses, as [0009] gives for after the first release. Split, when it's next, into its specification and building tasks. | `edgar-data-pipeline`'s T12, owner | |
-| T12 | **A default interpreter.** Whether the header's digits read as Eastern Time become the default, in a minor version of `spec/times.md` ([TIME-8], [TIME-9]). | A finding in `edgar-data-pipeline` that compares more headers with `submissions` than [SRC-2] and [SRC-13] do | |
+| T10 | **Published cases for "as of T".** Cases with their inputs and answers, published with the library, so that `edgar-data-pipeline`'s query API is tested against them and both answer the same way ([0009], its T26). Split, when it's next, into a minor version of `spec/facts.md`, a building task, and a release that publishes them, which `edgar-data-pipeline`'s T26 waits on. | T9 | |
+| T11 | **XBRL instances.** Every fact a filing reports, read from its XBRL instance with the parser that `edgar-data-pipeline`'s T12 chooses, as [0009] gives for after the first release. Split, when it's next, into its specification, its building tasks, and a release that publishes them, which `edgar-data-pipeline`'s T25 waits on. | T9, `edgar-data-pipeline`'s T12, owner | |
+| T12 | **A default interpreter.** Whether the header's digits read as Eastern Time become the default, in a minor version of `spec/times.md` ([TIME-8], [TIME-9]). | T9, and a finding in `edgar-data-pipeline` that compares more headers with `submissions` than [SRC-2] and [SRC-13] do | |
 
 [0009]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/docs/decisions/0009-read-edgar-through-a-public-point-in-time-library.md
 [SRC-2]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
