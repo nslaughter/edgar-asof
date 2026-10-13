@@ -29,28 +29,32 @@ system.
   names the next task in the status line.
 - **`edgar-data-pipeline` waits on releases, not tasks.** Its plan names
   the `edgar-asof` release each of its tasks needs, such as its T24, which
-  reads `submissions` and headers through the first release.
+  reads `submissions` and headers through the first release, from bodies
+  it gives the library (the store's [FETCH-18]).
 - **The owner adds, removes, and reorders tasks.**
 
 ## The first release
 
 Version 0.1.0 reads `companyfacts` and joins each value to the acceptance
 time of the filing that reported it, through `submissions`, as
-`edgar-data-pipeline`'s decision [0009] gives for the first release. Each
-specification is its own pull request, versioned as its document says.
-Each building task builds what its specifications say, with tests that
-carry their IDs.
+`edgar-data-pipeline`'s decision [0009] gives for the first release. It
+reads each body from its cache, fetching it when it must, or takes it from
+the caller, with its URL, as `edgar-data-pipeline`'s services give it
+bodies from their store and never let it fetch or keep a cache (the
+store's [FETCH-18]). Each specification is its own pull request, versioned
+as its document says. Each building task builds what its specifications
+say, with tests that carry their IDs.
 
 | ID | Task | Depends on | Done |
 | --- | --- | --- | --- |
-| T1 | **Facts, `spec/facts.md`.** The fact model and what "as of T" returns, which [0009] gives this library to define. Each `companyfacts` value with its concept, unit, and period, joined by its `accn` to its filing in `submissions`, the further files among them, and so to its raw acceptance times ([SRC-6] to [SRC-12]). Each filing's value for a key, kept beside the others, whether it repeats or restates them, amendments among them ([SRC-14] to [SRC-17]). For a concept and a period, the value known at T, through the caller's interpreter ([TIME-9]), and the values later filings reported for it. It also says what an answer records about its inputs, which [`fetching.md`](../spec/fetching.md#7-where-the-cache-departs-from-the-store) leaves to it, and the functions and types a caller uses for facts. It refers to raw times, instants, interpreters, and a read's arguments by their statements ([TIME-3], [TIME-6], [CLIENT-2], [CACHE-9]), and leaves their names to T2 and T3. | — | |
-| T2 | **The interface of fetching, a minor version of [`spec/fetching.md`](../spec/fetching.md).** The functions and types a caller uses: reading with a user agent and a cache directory ([CLIENT-2], [CACHE-9]), a fresh fetch ([CACHE-8]), and the errors a read raises: wherever `fetching.md` says it requests nothing or fails ([CLIENT-2], [CLIENT-9] to [CLIENT-13], [CACHE-5]), and after its last attempt ([CLIENT-8]); and what a fresh fetch returns when it receives a `304`, which [CLIENT-5] makes possible and [CLIENT-10] doesn't except. Named to agree with T1's, so that the building tasks don't choose what the specifications leave open ([`AGENTS.md`](../AGENTS.md#doing-the-next-item), step 7). It also lets a statement's tests wait for the later task in this plan that writes them, in [§3](../spec/fetching.md#3-statement-ids), which [`times.md`](../spec/times.md#2-statement-ids) follows, and in [`AGENTS.md`'s rule on tests](../AGENTS.md#rules), as `edgar-data-pipeline`'s [`spec/snapshots.md`][store-ids] and `AGENTS.md` do. | T1 | |
-| T3 | **The interface of acceptance times, a minor version of [`spec/times.md`](../spec/times.md).** The types of raw times and instants, an interpreter's signature, and the two interpreters a caller passes ([TIME-6] to [TIME-8]), named to agree with T1's and T2's. | T2 | |
+| T1 | **Facts, `spec/facts.md`.** The fact model and what "as of T" returns, which [0009] gives this library to define. Each `companyfacts` value with its concept, unit, and period, joined by its `accn` to its filing in `submissions`, the further files among them, and so to its raw acceptance times ([SRC-6] to [SRC-12]). Each filing's value for a key, kept beside the others, whether it repeats or restates them, amendments among them ([SRC-14] to [SRC-17]). For a concept and a period, the value known at T, through the caller's interpreter ([TIME-9]), and the values later filings reported for it. It reads both feeds from the cache or from bodies the caller gives. It also says what an answer records about its inputs, which [`fetching.md`](../spec/fetching.md#7-where-the-cache-departs-from-the-store) leaves to it, and the functions and types a caller uses for facts. It refers to raw times, instants, interpreters, and a read's arguments by their statements ([TIME-3], [TIME-6], [CLIENT-2], [CACHE-9]), and leaves their names to T2 and T3. | — | |
+| T2 | **The interface of fetching, a new version of [`spec/fetching.md`](../spec/fetching.md).** The functions and types a caller uses: reading with a user agent and a cache directory ([CLIENT-2], [CACHE-9]); a fresh fetch ([CACHE-8]); reading a body the caller gives, with its URL, and what that changes in [§1](../spec/fetching.md#1-guarantees)'s guarantees, which hold every body read to a recorded fetch; and the errors a read raises: wherever `fetching.md` says it requests nothing or fails ([CLIENT-2], [CLIENT-9] to [CLIENT-13], [CACHE-5]), and after its last attempt ([CLIENT-8]); and what a fresh fetch returns when it receives a `304`, which [CLIENT-5] makes possible and [CLIENT-10] doesn't except. Named to agree with T1's, so that the building tasks don't choose what the specifications leave open ([`AGENTS.md`](../AGENTS.md#doing-the-next-item), step 7). It also lets a statement's tests wait for the later task in this plan that writes them, in [§3](../spec/fetching.md#3-statement-ids), which [`times.md`](../spec/times.md#2-statement-ids) follows, and in [`AGENTS.md`'s rule on tests](../AGENTS.md#rules), as `edgar-data-pipeline`'s [`spec/snapshots.md`][store-ids] and `AGENTS.md` do. | T1 | |
+| T3 | **The interface of acceptance times, a new version of [`spec/times.md`](../spec/times.md).** The types of raw times and instants, an interpreter's signature, and the two interpreters a caller passes ([TIME-6] to [TIME-8]), named to agree with T1's and T2's. It also says what a raw time read from a body the caller gives keeps, where [TIME-3] names only a cached body. | T2 | |
 | T4 | **The project.** The `uv` project for the `edgar-asof` package, with a format check, a lint, a type check, and tests, run on each pull request, as `edgar-data-pipeline` has. Tests carry the `spec` marker, and a guard fails any test that reaches the network ([`AGENTS.md`](../AGENTS.md#rules)). `tests/test_spec_coverage.py` fails if a statement in an index has no test, unless a later task here writes it, as T2 allows, or if a marker names no statement, as `edgar-data-pipeline`'s does. It fills in [`AGENTS.md`'s commands](../AGENTS.md#commands). | T2 | |
 | T5 | **The cache.** [CACHE-1] to [CACHE-7] and [CACHE-9]: writing objects and records, under the lock ([CACHE-6]) and never into a snapshot store ([CACHE-5]), and reading a cache, or a store as one. Tested on temporary directories, and on stored versions laid out as a snapshot store. | T2, T4 | |
 | T6 | **The client.** [CLIENT-1] to [CLIENT-15], and reads that fetch into the cache ([CACHE-8]), with the lock and the refusal to fetch into a store tested through a fetch ([CACHE-5], [CACHE-6]). Tested against a local server that stands in for EDGAR. | T5 | |
-| T7 | **Acceptance times.** [TIME-1] to [TIME-9]: raw times from cached headers and `submissions`, and the two interpreters. | T3, T5 | |
-| T8 | **Facts.** `spec/facts.md`'s statements, from cached `companyfacts` and `submissions`. | T1, T7 | |
+| T7 | **Acceptance times.** [TIME-1] to [TIME-9]: raw times from headers and `submissions`, cached or given, and the two interpreters. | T3, T5 | |
+| T8 | **Facts.** `spec/facts.md`'s statements, from `companyfacts` and `submissions`, cached or given. | T1, T7 | |
 | T9 | **Release 0.1.0.** The package's metadata, the README's account of how to use it, and its publication on PyPI as `edgar-asof`. The PyPI account, and how releases are published to it, are the owner's. | T6, T8, owner | |
 
 ## Later
@@ -65,6 +69,7 @@ After the first release, so each task here waits for T9.
 
 [0009]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/docs/decisions/0009-read-edgar-through-a-public-point-in-time-library.md
 [store-ids]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/spec/snapshots.md#3-statement-ids
+[FETCH-18]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/spec/snapshots.md#the-fetcher
 [SRC-2]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-6]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-12]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
