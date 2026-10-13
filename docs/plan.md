@@ -47,8 +47,8 @@ carry their IDs.
 | T2 | **The interface of fetching, a minor version of [`spec/fetching.md`](../spec/fetching.md).** The functions and types a caller uses: reading with a user agent and a cache directory ([CLIENT-2], [CACHE-9]), a fresh fetch ([CACHE-8]), and the errors a read raises: wherever `fetching.md` says it requests nothing or fails ([CLIENT-2], [CLIENT-9] to [CLIENT-13], [CACHE-5]), and after its last attempt ([CLIENT-8]); and what a fresh fetch returns when it receives a `304`, which [CLIENT-5] makes possible and [CLIENT-10] doesn't except. Named to agree with T1's, so that the building tasks don't choose what the specifications leave open ([`AGENTS.md`](../AGENTS.md#doing-the-next-item), step 7). It also lets a statement's tests wait for the later task in this plan that writes them, in [§3](../spec/fetching.md#3-statement-ids), which [`times.md`](../spec/times.md#2-statement-ids) follows, and in [`AGENTS.md`'s rule on tests](../AGENTS.md#rules), as `edgar-data-pipeline`'s [`spec/snapshots.md`][store-ids] and `AGENTS.md` do. | T1 | |
 | T3 | **The interface of acceptance times, a minor version of [`spec/times.md`](../spec/times.md).** The types of raw times and instants, an interpreter's signature, and the two interpreters a caller passes ([TIME-6] to [TIME-8]), named to agree with T1's and T2's. | T2 | |
 | T4 | **The project.** The `uv` project for the `edgar-asof` package, with a format check, a lint, a type check, and tests, run on each pull request, as `edgar-data-pipeline` has. Tests carry the `spec` marker, and a guard fails any test that reaches the network ([`AGENTS.md`](../AGENTS.md#rules)). `tests/test_spec_coverage.py` fails if a statement in an index has no test, unless a later task here writes it, as T2 allows, or if a marker names no statement, as `edgar-data-pipeline`'s does. It fills in [`AGENTS.md`'s commands](../AGENTS.md#commands). | T2 | |
-| T5 | **The cache.** [CACHE-1] to [CACHE-9], tested on temporary directories, and on stored versions laid out as a snapshot store ([CACHE-5]). | T2, T4 | |
-| T6 | **The client.** [CLIENT-1] to [CLIENT-15], tested against a local server that stands in for EDGAR. | T5 | |
+| T5 | **The cache.** [CACHE-1] to [CACHE-7] and [CACHE-9]: writing objects and records, under the lock ([CACHE-6]) and never into a snapshot store ([CACHE-5]), and reading a cache, or a store as one. Tested on temporary directories, and on stored versions laid out as a snapshot store. | T2, T4 | |
+| T6 | **The client.** [CLIENT-1] to [CLIENT-15], and reads that fetch into the cache ([CACHE-8]), with the lock and the refusal to fetch into a store tested through a fetch ([CACHE-5], [CACHE-6]). Tested against a local server that stands in for EDGAR. | T5 | |
 | T7 | **Acceptance times.** [TIME-1] to [TIME-9]: raw times from cached headers and `submissions`, and the two interpreters. | T3, T5 | |
 | T8 | **Facts.** `spec/facts.md`'s statements, from cached `companyfacts` and `submissions`. | T1, T7 | |
 | T9 | **Release 0.1.0.** The package's metadata, the README's account of how to use it, and its publication on PyPI as `edgar-asof`. The PyPI account, and how releases are published to it, are the owner's. | T6, T8, owner | |
@@ -81,6 +81,8 @@ After the first release, so each task here waits for T9.
 [CLIENT-15]: ../spec/fetching.md#5-feeds
 [CACHE-1]: ../spec/fetching.md#6-the-cache
 [CACHE-5]: ../spec/fetching.md#6-the-cache
+[CACHE-6]: ../spec/fetching.md#6-the-cache
+[CACHE-7]: ../spec/fetching.md#6-the-cache
 [CACHE-8]: ../spec/fetching.md#6-the-cache
 [CACHE-9]: ../spec/fetching.md#6-the-cache
 [TIME-1]: ../spec/times.md#3-raw-times
