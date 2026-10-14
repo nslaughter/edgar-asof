@@ -145,7 +145,8 @@ wherever a cache or a snapshot store keeps them ([CACHE-5]).
 - **FACT-6** (rule) Each value that `companyfacts` gives becomes one fact,
   and nothing else does. No value is dropped, merged with another, or
   replaced by another filing's value for its key, which `companyfacts`
-  keeps beside it ([SRC-14]).
+  keeps beside it ([SRC-14]). No filing gives a key twice ([SRC-14]), and
+  if one does, the read of facts fails.
 - **FACT-7** (rule) A fact's key is the company's CIK; its concept,
   written as the taxonomy, a colon, and the concept's name, such as
   `us-gaap:Revenues`; its unit, as given; and its value's `start`, if it
@@ -231,7 +232,7 @@ known, and later filings give the values that came after.
 - **ASOF-5** (rule) `earlier` and `later` are ordered by instant, then by
   accession number, and `known` and `unplaced` by accession number.
   Accession numbers order facts only so that an answer is repeatable, not
-  as times.
+  as times, and no two of a key's facts share one ([FACT-6]).
 - **ASOF-6** (rule) An answer also gives its key, T, its interpreter, and
   the inputs of its company's facts ([FACT-5]).
 
@@ -265,7 +266,7 @@ times.md's, which their next versions give, as the
 | `Filing` | Type | `accession_number`, a `str`, as `accn` gives it; and `raw_times`, a tuple of the filing's raw times: two, one, or none ([FACT-10] to [FACT-12]). |
 | `Placed` | Type | `fact`, a `Fact`; and `accepted`, the instant the interpreter gave its filing ([ASOF-2]). |
 | `Answer` | Type | `key`, a `Key`; `at`, the instant T; `interpreter`; `earlier`, `known`, and `later`, each a tuple of `Placed`; `unplaced`, a tuple of `Fact`; and `inputs`, its `CompanyFacts`' ([ASOF-3] to [ASOF-6]). |
-| `FactsError` | Exception | A body that a read of facts can't read ([FACT-4], [FACT-10]). |
+| `FactsError` | Exception | A body that a read of facts can't read ([FACT-4], [FACT-6], [FACT-10]). |
 
 - **FACT-13** (rule) The package `edgar_asof` gives the function and types
   in the table, with their parameters and fields. Each type but
@@ -277,9 +278,9 @@ times.md's, which their next versions give, as the
   of another company, given to `facts` or `as_of`, and an interpreter of
   `None` ([ASOF-1]). A body that
   a read of facts can't read raises `FactsError`, which names the body's
-  URL ([FACT-4], [FACT-10]). A read of a body that fails raises the error
-  that fetching.md gives it, as does a read of facts that needs a URL the
-  caller didn't give ([FACT-2]).
+  URL ([FACT-4], [FACT-6], [FACT-10]). A read of a body that fails raises
+  the error that fetching.md gives it, as does a read of facts that needs
+  a URL the caller didn't give ([FACT-2]).
 
 ## 9. Index
 
@@ -290,7 +291,7 @@ times.md's, which their next versions give, as the
 | FACT-3 | rule | tests | A fresh read fetches the company's lists and `companyfacts` again, and fails on given bodies. |
 | FACT-4 | rule | tests | A failed read or an unreadable body fails the read of facts, and makes no facts. |
 | FACT-5 | rule | tests | Facts record each body's URL and `sha256` as their inputs. |
-| FACT-6 | rule | tests | Each value becomes one fact, and none replaces another. |
+| FACT-6 | rule | tests | Each value becomes one fact, and none replaces another; a key given twice by one filing fails the read. |
 | FACT-7 | rule | tests | A key is the CIK, `taxonomy:name`, the unit, and the dates as given. |
 | FACT-8 | rule | tests | A value is kept exactly, as an integer or a decimal. |
 | FACT-9 | rule | tests | `form`, `filed`, `fy`, `fp`, and `frame` are kept as given. |
