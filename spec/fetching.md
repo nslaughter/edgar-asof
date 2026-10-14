@@ -10,10 +10,10 @@ The library fetches for people who use it on its own, under the SEC's rules
 for automated access
 ([Accessing EDGAR data](https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data)).
 It also reads bodies that a caller gives it, and fetches nothing for them,
-as `edgar-data-pipeline`'s services give it bodies from their store (the
-store's FETCH-18). Its cache follows the snapshot store of
-`edgar-data-pipeline`, as that repository's decision [0009] says: each
-body stored once by its SHA-256, each fetch a record, and nothing
+as `edgar-data-pipeline`'s services give it bodies from their store
+(FETCH-18 in the store's version 1.0.0). Its cache follows the snapshot
+store of `edgar-data-pipeline`, as that repository's decision [0009] says:
+each body stored once by its SHA-256, each fetch a record, and nothing
 overwritten. The store is specified in that repository's
 [`spec/snapshots.md`][store], version 0.2.0, whose statements are cited
 here as the store's, such as the store's FETCH-6.
@@ -233,8 +233,8 @@ CACHE/
 - **The library also reads bodies the caller gives,** where the store's
   programs read only what its writers fetched. `edgar-data-pipeline`'s
   services give the library bodies from their store, and never use its
-  client or keep a cache (the store's FETCH-18), so a read from them
-  fetches and writes nothing ([READ-2]).
+  client or keep a cache (FETCH-18 in the store's version 1.0.0), so a
+  read from them fetches and writes nothing ([READ-2]).
 - **The library enforces one process at a time** with a lock ([CACHE-6]),
   where the store leaves it to the operator (the store's FETCH-7).
 - **A cache's history isn't in git,** so keeping it unchanged is a rule the
