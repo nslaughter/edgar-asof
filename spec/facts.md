@@ -125,8 +125,9 @@ answer only interprets and compares, and reads nothing
     an `fp`, or a `frame` that isn't null, the `start` is a date, the `fy`
     an integer, and the `fp` and the `frame` strings ([SRC-6], [SRC-8],
     [SRC-11]).
-  - A header is read when it gives its `ACCEPTANCE-DATETIME` as the 14
-    digits that times.md reads ([TIME-1], [SRC-1]).
+  - A header is read whatever it gives. One that doesn't give its
+    `ACCEPTANCE-DATETIME` as the 14 digits that times.md reads ([TIME-1],
+    [SRC-1]) gives its filing no raw time ([FACT-11]).
 
   No finding yet records the column `accessionNumber`, what
   `filings.files` is for a company with no further file, or how
@@ -181,8 +182,12 @@ known at any time ([SRC-17]). So a fact's period is its key's `start` and
   once, in one list or in two, the read of facts fails.
 - **FACT-11** (rule) When the caller asks for headers, each filing that a
   value names and a list read holds also has its header's raw time
-  ([TIME-1]), beside the one from `submissions` ([TIME-4]). No other
-  filing's header is read ([FACT-1]).
+  ([TIME-1]), beside the one from `submissions` ([TIME-4]), if its header
+  gives `ACCEPTANCE-DATETIME` as the 14 digits that times.md reads. A
+  filing whose header doesn't has only its raw time from `submissions`,
+  and its facts are kept as any others are ([FACT-6]): times.md's
+  interpreter of the header's digits leaves them unplaced ([TIME-8]). No
+  other filing's header is read ([FACT-1]).
 - **FACT-12** (rule) A filing that no list read holds has no raw time from
   `submissions`, and the library doesn't read its header, since [SRC-21]
   gives the URL of only a listed filing's files. Its facts are kept as any
@@ -196,9 +201,10 @@ gives it as unplaced unless the caller's interpreter places it
 
 A header's raw time is the one that times.md's interpreter of the
 header's digits reads ([TIME-8]), so that interpreter places a fact only
-when its read of facts asked for headers. Such a read takes one more body
-for each filing with values: 216 for the three companies
-`edgar-data-pipeline` investigated ([SRC-6]).
+when its read of facts asked for headers, and its filing's header gave
+the 14 digits ([FACT-11]). Such a read takes one more body for each
+filing with values: 216 for the three companies `edgar-data-pipeline`
+investigated ([SRC-6]).
 
 ## 7. As of T
 
@@ -266,7 +272,7 @@ times.md's, which their next versions give, as the
 | `Filing` | Type | `accession_number`, a `str`, as `accn` gives it; and `raw_times`, a tuple of the filing's raw times: two, one, or none ([FACT-10] to [FACT-12]). |
 | `Placed` | Type | `fact`, a `Fact`; and `accepted`, the instant the interpreter gave its filing ([ASOF-2]). |
 | `Answer` | Type | `key`, a `Key`; `at`, the instant T; `interpreter`; `earlier`, `known`, and `later`, each a tuple of `Placed`; `unplaced`, a tuple of `Fact`; and `inputs`, its `CompanyFacts`' ([ASOF-3] to [ASOF-6]). |
-| `FactsError` | Exception | A body that a read of facts can't read ([FACT-4], [FACT-6], [FACT-10]). |
+| `FactsError` | Exception | A body that a read of facts can't read ([FACT-4], [FACT-6], [FACT-10]). A header that's read never raises it ([FACT-11]). |
 
 - **FACT-13** (rule) The package `edgar_asof` gives the function and types
   in the table, with their parameters and fields. Each type but
@@ -278,9 +284,10 @@ times.md's, which their next versions give, as the
   of another company, given to `facts` or `as_of`, and an interpreter of
   `None` ([ASOF-1]). A body that
   a read of facts can't read raises `FactsError`, which names the body's
-  URL ([FACT-4], [FACT-6], [FACT-10]). A read of a body that fails raises
-  the error that fetching.md gives it, as does a read of facts that needs
-  a URL the caller didn't give ([FACT-2]).
+  URL ([FACT-4], [FACT-6], [FACT-10]); a header that's read never raises
+  it ([FACT-11]). A read of a body that fails raises the error that
+  fetching.md gives it, as does a read of facts that needs a URL the
+  caller didn't give ([FACT-2]).
 
 ## 9. Index
 
@@ -289,14 +296,14 @@ times.md's, which their next versions give, as the
 | FACT-1 | rule | tests | A read of facts reads `companyfacts`, `submissions`, the further files its values' dates need, and, if asked, headers. |
 | FACT-2 | rule | tests | Bodies come from a cache, as fetching.md reads them, or from the caller, with nothing fetched. |
 | FACT-3 | rule | tests | A fresh read fetches the company's lists and `companyfacts` again, and fails on given bodies. |
-| FACT-4 | rule | tests | A failed read or an unreadable body fails the read of facts, and makes no facts. |
+| FACT-4 | rule | tests | A failed read or an unreadable body fails the read of facts, and makes no facts; a header without the 14 digits doesn't. |
 | FACT-5 | rule | tests | Facts record each body's URL and `sha256` as their inputs. |
 | FACT-6 | rule | tests | Each value becomes one fact, and none replaces another; a key given twice by one filing fails the read. |
 | FACT-7 | rule | tests | A key is the CIK, `taxonomy:name`, the unit, and the dates as given. |
 | FACT-8 | rule | tests | A value is kept exactly, as an integer or a decimal. |
 | FACT-9 | rule | tests | `form`, `filed`, `fy`, `fp`, and `frame` are kept as given. |
 | FACT-10 | rule | tests | A fact's filing has its list's `acceptanceDateTime`; an accession number listed twice fails the read. |
-| FACT-11 | rule | tests | When asked, a listed filing that a value names also has its header's raw time. |
+| FACT-11 | rule | tests | When asked, a listed filing that a value names also has its header's raw time, if its header gives the 14 digits. |
 | FACT-12 | rule | tests | A filing no list holds has no raw time from `submissions`, and its facts are kept. |
 | ASOF-1 | rule | tests | An answer is for a key, T, and an interpreter the caller passes. |
 | ASOF-2 | rule | tests | Each filing is interpreted once; its facts are placed at its instant, or unplaced. |
