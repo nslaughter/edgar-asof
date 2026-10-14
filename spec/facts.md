@@ -125,6 +125,8 @@ answer only interprets and compares, and reads nothing
     an `fp`, or a `frame` that isn't null, the `start` is a date, the `fy`
     an integer, and the `fp` and the `frame` strings ([SRC-6], [SRC-8],
     [SRC-11]).
+  - A header is read when it gives its `ACCEPTANCE-DATETIME` as the 14
+    digits that times.md reads ([TIME-1], [SRC-1]).
 
   No finding yet records the column `accessionNumber`, what
   `filings.files` is for a company with no further file, or how
@@ -358,6 +360,7 @@ in the index.
 [0009]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/docs/decisions/0009-read-edgar-through-a-public-point-in-time-library.md
 [Bitemporal History]: https://martinfowler.com/articles/bitemporal-history.html
 [Times]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/docs/design.md#times
+[SRC-1]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-6]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-7]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-8]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
