@@ -211,7 +211,10 @@ CACHE/
   that isn't a JSON object with a `url` that is a string and a `sha256`
   that is null or 64 lower-case hexadecimal digits; or the object of the
   version it reads, when the object is missing or isn't gzip data whose
-  decompressed bytes have that SHA-256 (the store's OBJ-1).
+  decompressed bytes have that SHA-256 (the store's OBJ-1). A read that
+  would send validators ([CLIENT-5]) reads, before it requests anything,
+  the object of the version they come from, which a `304` names
+  ([CLIENT-16]).
 
 ## 7. Where the cache departs from the store
 
@@ -290,9 +293,10 @@ source, and a body's URL and `sha256`, by these names ([FACT-2],
   the URL. It returns the body that its fetch's record names: the body
   received with a `200`, or the version that a `304` names ([CLIENT-16]).
 - **READ-6** (rule) A read from a cache that would fetch raises, before it
-  requests or writes anything, `ForbiddenError` if a fetch in the process
-  has received a `403` ([CLIENT-9]); else `SnapshotStoreError` if the
-  cache's directory holds a `scope.json` ([CACHE-5]); else
+  requests or writes anything, `CacheError` if it can't read what
+  [CACHE-10] says it needs; else `ForbiddenError` if a fetch in the
+  process has received a `403` ([CLIENT-9]); else `SnapshotStoreError` if
+  the cache's directory holds a `scope.json` ([CACHE-5]); else
   `NoUserAgentError` if the cache has no user agent ([CLIENT-2]). A fetch
   that receives a `403` raises `ForbiddenError`, and one whose record
   names no body raises `FetchError`, with the record's `status` and
