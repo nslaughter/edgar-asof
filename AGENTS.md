@@ -16,6 +16,7 @@ the model for this one.
 | --- | --- |
 | [`spec/fetching.md`](spec/fetching.md) | How the library requests EDGAR's feeds, and its cache, as numbered statements with an index. |
 | [`spec/times.md`](spec/times.md) | Filings' acceptance times, as EDGAR gives them and as instants. |
+| [`spec/facts.md`](spec/facts.md) | Each `companyfacts` value as a fact, with its key and the raw acceptance times of the filing that reported it; what "as of T" returns; what an answer records about its inputs; and the functions and types a caller uses for facts, as numbered statements with an index. |
 | `edgar-data-pipeline`'s [findings] | Nothing here. They record what EDGAR's feeds do, each finding with an ID from `SRC-1` onward and the stored versions that show it. This repository's specifications depend on EDGAR only through these findings. |
 | `edgar-data-pipeline`'s [`spec/snapshots.md`][store] | Nothing here. It specifies the snapshot store, which the cache follows. |
 | [`docs/plan.md`](docs/plan.md) | Nothing; it orders the work. The tasks that build the library, in order, what each depends on, and which are done. [Doing the next item](#doing-the-next-item) takes the next task from it. |
@@ -28,6 +29,7 @@ Each document makes one kind of claim, and its directory says which.
 spec/                    normative: numbered statements that code and tests cite
   fetching.md            requests and the cache
   times.md               acceptance times
+  facts.md               facts, and what "as of T" returns
   NAME.md                one per component, or boundary between components
 docs/
   decisions/NNNN-*.md    one record per significant choice
