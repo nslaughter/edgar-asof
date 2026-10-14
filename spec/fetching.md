@@ -66,7 +66,11 @@ Each statement is one of two kinds:
 
 Tests check both. Every statement in the index has at least one test
 marked with its ID, as `@pytest.mark.spec("CLIENT-5")`, and every marker
-names an ID in the index.
+names an ID in the index. A test, `tests/test_spec_coverage.py`, enforces
+both, except for a statement whose tests a later task in the
+[plan](../docs/plan.md) writes. It lists such a statement as awaiting that
+task, and fails if the statement has a test or the plan marks the task
+done.
 
 ## 4. Requests
 

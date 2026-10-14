@@ -72,9 +72,11 @@ docs/
 - **Every statement has an ID, and its tests carry it.** Mark each test with
   the IDs it checks, as `@pytest.mark.spec("CLIENT-5")`. A new statement
   gets the next unused number in its area, and IDs are never reused or
-  renumbered. The first code adds a test that fails if a statement in an
-  index has no test, or a marker names no statement, as
-  `edgar-data-pipeline`'s `tests/test_spec_coverage.py` does.
+  renumbered. The first code adds `tests/test_spec_coverage.py`, which
+  fails if a statement in an index has no test, or a marker names no
+  statement, as `edgar-data-pipeline`'s does. A statement whose tests a
+  later task in the plan writes is listed there with that task, until the
+  tests exist ([`fetching.md`'s §3](spec/fetching.md#3-statement-ids)).
 - **Don't build undocumented source behavior into code.** If EDGAR does
   something no finding records, report it. The finding is recorded in
   `edgar-data-pipeline`.
