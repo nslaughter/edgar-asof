@@ -18,7 +18,8 @@ acceptance times raw and turns them into instants as
 [`times.md`](times.md) says, both at version 0.1.0. Data read by this
 library comes from the U.S. Securities and Exchange Commission's EDGAR
 system; this document depends on how EDGAR behaves only where it cites a
-finding.
+finding, and in the parts of the feeds' layout that no finding records
+yet, which [§10](#10-open-questions)'s second question names.
 
 ## 1. Guarantees
 
@@ -118,12 +119,17 @@ answer only interprets and compares, and reads nothing
     `YYYY-MM-DD`. A further file is read when it's a JSON object that holds
     those columns itself ([SRC-12]).
   - `companyfacts` is read when it gives each value under its concept,
-    named within its taxonomy, and its unit ([SRC-14]). Each value has a
+    named within its taxonomy, and its unit. Each value has a
     `val` that is a number; an `end` and a `filed` that are dates; and an
     `accn` and a `form` that are strings. Where it has a `start`, a `fy`,
     an `fp`, or a `frame` that isn't null, the `start` is a date, the `fy`
     an integer, and the `fp` and the `frame` strings ([SRC-6], [SRC-8],
     [SRC-11]).
+
+  No finding yet records the column `accessionNumber`, what
+  `filings.files` is for a company with no further file, or how
+  `companyfacts` nests its values, which
+  [§10](#10-open-questions)'s second question leaves open.
 - **FACT-5** (rule) A company's facts record, as their inputs, the URL and
   `sha256` of each body the read of facts took, ordered by URL. A cached
   body's `sha256` is that of the version read ([CACHE-7]); a given body's
@@ -307,6 +313,18 @@ times.md's, which their next versions give, as the
    unplaced until a later fresh read finds the filing listed. Proposed
    default: as written, so nothing is inferred, until a finding from
    `edgar-data-pipeline`'s record shows how soon each feed shows a filing.
+2. **The parts of the feeds' layout that no finding records yet.** The
+   findings name the values' fields, the column `acceptanceDateTime`, and
+   the further files ([SRC-6], [SRC-12], [SRC-14], [SRC-21]), but not how
+   `companyfacts` nests its values, under `facts`, each taxonomy, each
+   concept, `units`, and each unit; the column `accessionNumber`, which
+   holds a list's accession numbers; or what `filings.files` is for a
+   company with no further file. [FACT-4] checks all three, and [FACT-7]
+   writes a concept from the first. If `filings.files` were missing for
+   such a company, FACT-4 as written would fail every read of its facts.
+   Proposed default: as written, with a finding in `edgar-data-pipeline`
+   that records this layout, which T8 depends on and this document then
+   cites.
 
 ### Left to other specifications
 
