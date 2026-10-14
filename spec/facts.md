@@ -330,6 +330,7 @@ times.md's, which their next versions give, as the
    unplaced until a later fresh read finds the filing listed. Proposed
    default: as written, so nothing is inferred, until a finding from
    `edgar-data-pipeline`'s record shows how soon each feed shows a filing.
+   The owner kept this default on October 14, 2026.
 2. **The parts of the feeds' layout that no finding records yet.** The
    findings name the values' fields, the column `acceptanceDateTime`, and
    the further files ([SRC-6], [SRC-12], [SRC-14], [SRC-21]), but not how
@@ -341,7 +342,8 @@ times.md's, which their next versions give, as the
    such a company, FACT-4 as written would fail every read of its facts.
    Proposed default: as written, with a finding in `edgar-data-pipeline`
    that records this layout, which T8 depends on and this document then
-   cites.
+   cites. The owner deferred the finding until T8 on October 14, 2026, and
+   the [plan](../docs/plan.md)'s T8 depends on it.
 
 ### Left to other specifications
 
