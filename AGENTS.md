@@ -18,6 +18,7 @@ the model for this one.
 | [`spec/times.md`](spec/times.md) | Filings' acceptance times, as EDGAR gives them and as instants. |
 | `edgar-data-pipeline`'s [findings] | Nothing here. They record what EDGAR's feeds do, each finding with an ID from `SRC-1` onward and the stored versions that show it. This repository's specifications depend on EDGAR only through these findings. |
 | `edgar-data-pipeline`'s [`spec/snapshots.md`][store] | Nothing here. It specifies the snapshot store, which the cache follows. |
+| [`docs/plan.md`](docs/plan.md) | Nothing; it orders the work. The tasks that build the library, in order, what each depends on, and which are done. [Doing the next item](#doing-the-next-item) takes the next task from it. |
 
 ## Where documents go
 
