@@ -240,12 +240,16 @@ known, and later filings give the values that came after.
 - **ASOF-5** (rule) `earlier` and `later` are ordered by instant, then by
   accession number, and `known` and `unplaced` by accession number. Facts
   with the same accession number, as when a filing gives the key twice
-  ([FACT-6]), are then ordered by their value, as numbers, and then by
-  `form`, `filed`, `fy`, `fp`, and `frame`, in that order, with none
-  first. Accession numbers order facts only so that an answer is
-  repeatable, not as times, and these fields only so that its order
-  doesn't depend on the order in which `companyfacts` gives values. Facts
-  that tie on all of them are equal, so their order changes nothing.
+  ([FACT-6]), are then ordered by their value, as numbers, then by their
+  value as written, and then by `form`, `filed`, `fy`, `fp`, and `frame`,
+  in that order, with none first. A value as written is the text of its
+  `val`, as `companyfacts` writes the number, and two such texts are
+  compared character by character, by code point, with the shorter first
+  where one begins the other, so `1` comes before `1.0`. Accession numbers
+  order facts only so that an answer is repeatable, not as times, and
+  these fields only so that its order doesn't depend on the order in which
+  `companyfacts` gives values. Facts that tie on all of them are equal, so
+  their order changes nothing.
 - **ASOF-6** (rule) An answer also gives its key, T, its interpreter, and
   the inputs of its company's facts ([FACT-5]).
 
