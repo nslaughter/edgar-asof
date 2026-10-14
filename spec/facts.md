@@ -171,8 +171,9 @@ known at any time ([SRC-17]). So a fact's period is its key's `start` and
   company's lists ([SRC-12]), and if two of the lists read hold one, the
   read of facts fails.
 - **FACT-11** (rule) When the caller asks for headers, each filing that a
-  list read holds also has its header's raw time ([TIME-1]), beside the
-  one from `submissions` ([TIME-4]).
+  value names and a list read holds also has its header's raw time
+  ([TIME-1]), beside the one from `submissions` ([TIME-4]). No other
+  filing's header is read ([FACT-1]).
 - **FACT-12** (rule) A filing that no list read holds has no raw time from
   `submissions`, and the library doesn't read its header, since [SRC-21]
   gives the URL of only a listed filing's files. Its facts are kept as any
@@ -286,7 +287,7 @@ times.md's, which their next versions give, as the
 | FACT-8 | rule | tests | A value is kept exactly, as an integer or a decimal. |
 | FACT-9 | rule | tests | `form`, `filed`, `fy`, `fp`, and `frame` are kept as given. |
 | FACT-10 | rule | tests | A fact's filing has its list's `acceptanceDateTime`; an accession number in two lists fails the read. |
-| FACT-11 | rule | tests | When asked, a listed filing also has its header's raw time. |
+| FACT-11 | rule | tests | When asked, a listed filing that a value names also has its header's raw time. |
 | FACT-12 | rule | tests | A filing no list holds has no raw time from `submissions`, and its facts are kept. |
 | ASOF-1 | rule | tests | An answer is for a key, T, and an interpreter the caller passes. |
 | ASOF-2 | rule | tests | Each filing is interpreted once; its facts are placed at its instant, or unplaced. |
