@@ -41,6 +41,9 @@ addopts = [
     "--strict-config",
     "--strict-markers",
     "--import-mode=importlib",
+    # tests/test_network_guard.py runs the guard in tests/conftest.py.
+    "-p",
+    "pytester",
 ]
 xfail_strict = true
 markers = ["spec(*ids): the spec/*.md statements a test checks"]
