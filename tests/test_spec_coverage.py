@@ -4,15 +4,23 @@ Every statement appears in its specification's index with its kind, once,
 checked by tests, as fetching.md's §3 says; each ID area belongs to one
 specification; every statement has a test marked with its ID, unless a
 later task in docs/plan.md, not yet done, writes it; and every marker names
-a statement in an index.
+a statement in an index. A test is one that pytest collects, with the
+markers pytest gives it.
 """
 
 from __future__ import annotations
 
-import ast
+import functools
+import json
 import re
+import subprocess
+import sys
+import tempfile
+import textwrap
 from collections import Counter
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 SPECS = {path.name: path.read_text(encoding="utf-8") for path in sorted(ROOT.glob("spec/*.md"))}
@@ -133,26 +141,65 @@ def repeated(ids: list[str]) -> list[str]:
     return sorted(id for id, count in Counter(ids).items() if count > 1)
 
 
-def markers() -> dict[str, list[str]]:
-    """Each ID named by @pytest.mark.spec(...), with the tests that carry it."""
-    found: dict[str, list[str]] = {}
-    for path in sorted((ROOT / "tests").rglob("test_*.py")):
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
-                continue
-            for decorator in node.decorator_list:
-                if (
-                    isinstance(decorator, ast.Call)
-                    and isinstance(decorator.func, ast.Attribute)
-                    and decorator.func.attr == "spec"
-                    and isinstance(decorator.func.value, ast.Attribute)
-                    and decorator.func.value.attr == "mark"
-                ):
-                    for arg in decorator.args:
-                        assert isinstance(arg, ast.Constant)
-                        assert isinstance(arg.value, str)
-                        found.setdefault(arg.value, []).append(node.name)
+@functools.cache
+def markers(tests: Path = ROOT / "tests") -> dict[str, list[str]]:
+    """Each ID that a `spec` marker names, with the tests that carry it.
+
+    The tests are those that pytest collects from a directory, with this
+    repository's configuration, in a process of its own. So a definition
+    that pytest doesn't collect, such as a class whose name doesn't start
+    with `Test`, isn't a test, and a marker counts wherever pytest reads it,
+    such as in `pytestmark` or a `pytest.param`.
+    """
+    with tempfile.TemporaryDirectory() as scratch:
+        output = Path(scratch) / "markers.json"
+        collection = subprocess.run(
+            [sys.executable, __file__, str(tests), str(output)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert collection.returncode == 0, collection.stdout + collection.stderr
+        found: dict[str, list[str]] = json.loads(output.read_text(encoding="utf-8"))
     return found
+
+
+class Markers:
+    """A pytest plugin that keeps the IDs of the tests a collection finds.
+
+    An ID that isn't a string is kept as its `repr`, which names no
+    statement.
+    """
+
+    def __init__(self) -> None:
+        self.found: dict[str, list[str]] = {}
+
+    def pytest_collection_finish(self, session: pytest.Session) -> None:
+        for item in session.items:
+            for marker in item.iter_markers("spec"):
+                for id in marker.args:
+                    key = id if isinstance(id, str) else repr(id)
+                    self.found.setdefault(key, []).append(item.nodeid)
+
+
+def collect(tests: str, output: str) -> int | pytest.ExitCode:
+    """Collect a directory's tests, without running them, and write their IDs."""
+    plugin = Markers()
+    code = pytest.main(
+        [
+            "--collect-only",
+            "--quiet",
+            "-p",
+            "no:cacheprovider",
+            "-c",
+            str(ROOT / "pyproject.toml"),
+            tests,
+        ],
+        plugins=[plugin],
+    )
+    Path(output).write_text(json.dumps(plugin.found), encoding="utf-8")
+    return code
 
 
 def plan_tasks() -> dict[str, str]:
@@ -208,3 +255,85 @@ def test_a_statement_awaits_only_a_task_the_plan_has_not_done() -> None:
 
 def test_every_marker_names_a_statement() -> None:
     assert sorted(set(markers()) - set(index())) == []
+
+
+def test_a_marker_counts_on_a_test_that_pytest_collects(tmp_path: Path) -> None:
+    (tmp_path / "test_module.py").write_text(
+        textwrap.dedent(
+            """
+            import pytest
+
+            pytestmark = pytest.mark.spec("EXAMPLE-1")
+
+            def test_module():
+                pass
+            """
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "test_forms.py").write_text(
+        textwrap.dedent(
+            """
+            import pytest
+            from pytest import mark
+
+            @mark.spec("EXAMPLE-2")
+            def test_mark():
+                pass
+
+            @pytest.mark.parametrize("n", [pytest.param(1, marks=pytest.mark.spec("EXAMPLE-3"))])
+            def test_param(n):
+                pass
+
+            @pytest.mark.spec("EXAMPLE-4")
+            class TestClass:
+                def test_method(self):
+                    pass
+
+            # Not tests: pytest collects neither.
+            @pytest.mark.spec("EXAMPLE-5")
+            class ExampleTests:
+                def test_method(self):
+                    pass
+
+            @pytest.mark.spec("EXAMPLE-6")
+            def example():
+                pass
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    found = {
+        id: [test.split("::", 1)[1] for test in tests] for id, tests in markers(tmp_path).items()
+    }
+
+    assert found == {
+        "EXAMPLE-1": ["test_module"],
+        "EXAMPLE-2": ["test_mark"],
+        "EXAMPLE-3": ["test_param[1]"],
+        "EXAMPLE-4": ["TestClass::test_method"],
+    }
+
+
+def test_an_id_that_isnt_a_string_names_no_statement(tmp_path: Path) -> None:
+    (tmp_path / "test_number.py").write_text(
+        textwrap.dedent(
+            """
+            import pytest
+
+            @pytest.mark.spec(5)
+            def test_number():
+                pass
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    assert list(markers(tmp_path)) == ["5"]
+
+
+if __name__ == "__main__":
+    # How markers() collects a directory's tests: `python
+    # tests/test_spec_coverage.py DIRECTORY OUTPUT`.
+    sys.exit(collect(*sys.argv[1:]))
