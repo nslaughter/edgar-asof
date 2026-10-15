@@ -7,11 +7,17 @@ makes it, or the fixture or collection that does. It fails with
 `pytest.fail`, whose error isn't an `Exception`, so the code under test
 can't catch it and go on, as a client that retries a failed connection
 would. A loopback address and a Unix socket are this host's.
+
+A proxy on this host would take a request for another host and send it
+on. So while tests run, the environment names no proxy, and `no_proxy` is
+`*`, which also keeps urllib from reading a proxy from macOS's settings: an
+HTTP client connects to the host it requests, which the guard checks.
 """
 
 from __future__ import annotations
 
 import ipaddress
+import os
 import socket
 from collections.abc import Callable
 from typing import Any
@@ -89,6 +95,11 @@ def pytest_configure(config: pytest.Config) -> None:
             guard.setattr(socket.socket, name, sending(getattr(socket.socket, name), at))
     for name in LOOKING_UP:
         guard.setattr(socket, name, looking_up(getattr(socket, name)))
+    for name in list(os.environ):
+        if name.lower().endswith("_proxy"):
+            guard.delenv(name)
+    for name in ("no_proxy", "NO_PROXY"):
+        guard.setenv(name, "*")
 
 
 def pytest_unconfigure(config: pytest.Config) -> None:

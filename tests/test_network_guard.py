@@ -157,3 +157,52 @@ def test_a_test_may_reach_this_host(pytester: pytest.Pytester) -> None:
     )
 
     result.assert_outcomes(passed=4)
+
+
+@pytest.mark.parametrize("name", ["https_proxy", "HTTPS_PROXY"])
+def test_a_proxy_on_this_host_sends_no_request_on(
+    pytester: pytest.Pytester, offline: list[str], monkeypatch: pytest.MonkeyPatch, name: str
+) -> None:
+    # A proxy that a shell names, without the `no_proxy` that the guard over
+    # these tests set. Beneath the guard, nothing listens for it.
+    monkeypatch.delenv("no_proxy", raising=False)
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    monkeypatch.setenv(name, "http://127.0.0.1:9")
+    result = run(
+        pytester,
+        """
+        import urllib.request
+
+        def test_reaches():
+            try:
+                urllib.request.urlopen("https://edgar-asof.invalid/", timeout=1)
+            except Exception:
+                pass
+        """,
+    )
+
+    result.assert_outcomes(failed=1)
+    result.stdout.fnmatch_lines(["*A test reached for the network*"])
+    assert offline == []
+
+
+def test_a_client_finds_no_proxy(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("no_proxy", raising=False)
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    for name in ("https_proxy", "HTTP_PROXY", "all_proxy"):
+        monkeypatch.setenv(name, "http://127.0.0.1:9")
+    result = run(
+        pytester,
+        """
+        import urllib.request
+
+        def test_finds_none():
+            # With an entry in the environment, urllib doesn't read macOS's
+            # settings, and `*` has it take no proxy for any host.
+            assert urllib.request.getproxies() == {"no": "*"}
+        """,
+    )
+
+    result.assert_outcomes(passed=1)
