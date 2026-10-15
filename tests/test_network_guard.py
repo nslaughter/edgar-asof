@@ -20,6 +20,10 @@ import pytest
 
 GUARD = (Path(__file__).parent / "conftest.py").read_text(encoding="utf-8")
 
+# Windows has no `sendmsg`, so the guard wraps it only where the platform
+# has it, and so do these tests.
+HAS_SENDMSG = hasattr(socket.socket, "sendmsg")
+
 # Each reaches for the network, and catches any Exception, as a client that
 # retries a failed connection would.
 REACHING = {
@@ -53,7 +57,8 @@ def offline(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         return reach
 
     for name in ("connect", "connect_ex", "sendto", "sendmsg"):
-        monkeypatch.setattr(socket.socket, name, stand_in(name))
+        if hasattr(socket.socket, name):
+            monkeypatch.setattr(socket.socket, name, stand_in(name))
     for name in (
         "getaddrinfo",
         "gethostbyname",
@@ -71,10 +76,13 @@ def run(pytester: pytest.Pytester, source: str) -> pytest.RunResult:
     return pytester.runpytest()
 
 
-@pytest.mark.parametrize("action", list(REACHING.values()), ids=list(REACHING))
+@pytest.mark.parametrize("name", list(REACHING))
 def test_a_test_that_reaches_the_network_fails_though_it_catches_the_error(
-    pytester: pytest.Pytester, offline: list[str], action: str
+    pytester: pytest.Pytester, offline: list[str], name: str
 ) -> None:
+    if name == "sendmsg" and not HAS_SENDMSG:
+        pytest.skip("This platform has no sendmsg.")
+    action = REACHING[name]
     result = run(
         pytester,
         f"""
@@ -138,14 +146,18 @@ def test_a_test_may_reach_this_host(pytester: pytest.Pytester) -> None:
                         pass
 
         def test_datagrams():
+            # Windows has no `sendmsg`.
+            sendmsg = hasattr(socket.socket, "sendmsg")
             with socket.socket(type=socket.SOCK_DGRAM) as server:
                 server.bind(("127.0.0.1", 0))
                 address = server.getsockname()
                 with socket.socket(type=socket.SOCK_DGRAM) as client:
                     client.sendto(b"", address)
-                    client.sendmsg([b""], [], 0, address)
+                    if sendmsg:
+                        client.sendmsg([b""], [], 0, address)
                     client.connect(address)
-                    client.sendmsg([b""])
+                    if sendmsg:
+                        client.sendmsg([b""])
 
         def test_unix_socket():
             with socket.socket(socket.AF_UNIX) as server:
