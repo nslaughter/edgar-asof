@@ -71,21 +71,23 @@ As in [`fetching.md`](fetching.md#3-statement-ids). The area here is
   the millisecond ([SRC-2]), and returns nothing for a filing without one.
 - **TIME-10** (rule) TIME-7's interpreter reads an `acceptanceDateTime`
   only in the form that [SRC-2] and [SRC-12] record,
-  `YYYY-MM-DDTHH:MM:SS.sssZ`, with a date that exists, from year 1 on,
-  and a time from `00:00:00.000` to `23:59:59.999`. For a filing whose
-  `acceptanceDateTime` has another form, it returns nothing.
+  `YYYY-MM-DDTHH:MM:SS.sssZ`, in ASCII digits, with a date that exists,
+  from year 1 on, and a time from `00:00:00.000` to `23:59:59.999`. For a
+  filing whose `acceptanceDateTime` has another form, it returns nothing.
 - **TIME-8** (rule) The library provides an interpreter that reads the
   header's digits as local time in a time zone the caller names by its IANA
   name, such as `America/New_York`, and returns nothing for a filing
   without a header time. It has no default zone. A local time that occurs
   twice, when daylight saving time ends, is read as the earlier instant.
 - **TIME-11** (rule) TIME-8's interpreter returns nothing for a filing
-  whose header's digits name no local time in its zone: a date that
-  doesn't exist or is before year 1, a time outside `00:00:00` to
-  `23:59:59`, or a time that the zone skips, as when daylight saving time
-  starts. It returns nothing, too, for a local time whose instant falls
-  outside the years 1 to 9999 in UTC, which no instant can be
-  ([TIME-14]), as `99991231230000` does in `America/New_York`.
+  whose header's raw time isn't 14 ASCII digits, `YYYYMMDDHHMMSS`, which
+  only a caller's `RawTime` can be ([TIME-1]), or whose digits name no
+  local time in its zone: a date that doesn't exist or is before year 1,
+  a time outside `00:00:00` to `23:59:59`, or a time that the zone skips,
+  as when daylight saving time starts. It returns nothing, too, for a
+  local time whose instant falls outside the years 1 to 9999 in UTC,
+  which no instant can be ([TIME-14]), as `99991231230000` does in
+  `America/New_York`.
 - **TIME-9** (rule) The library has no default interpreter. Wherever it
   turns acceptance times into instants, the caller passes an interpreter,
   and without one the library raises an error.
@@ -164,7 +166,7 @@ the body it was read from by fetching.md's `BodyRef` ([READ-1]).
 | TIME-7 | rule | tests | An interpreter reads `submissions`' time as the UTC instant it states. |
 | TIME-10 | rule | tests | `submissions`' time is read only in the form the findings record. |
 | TIME-8 | rule | tests | An interpreter reads the header's digits in a zone the caller names. |
-| TIME-11 | rule | tests | Header digits that name no local time in the zone, or no instant, give nothing. |
+| TIME-11 | rule | tests | A header time that isn't 14 digits, or names no local time in the zone or no instant, gives nothing. |
 | TIME-9 | rule | tests | There is no default interpreter; the caller passes one. |
 | TIME-12 | rule | tests | The package gives §5's functions and types; an instant is a UTC `datetime`. |
 | TIME-13 | rule | tests | An interpreter is given a filing's accession number and its raw times, the header's first. |
