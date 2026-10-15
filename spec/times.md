@@ -112,7 +112,7 @@ the body it was read from by fetching.md's `BodyRef` ([READ-1]).
 | Name | Kind | Parameters or fields |
 | --- | --- | --- |
 | `RawTime` | Type | A raw time ([§3](#3-raw-times)). `source`, a `str`, `"header"` or `"submissions"`; `text`, a `str`, the header's 14 digits or `submissions`' `acceptanceDateTime`, as given ([TIME-1], [TIME-2]); `accession_number`, a `str`, its filing's, as facts.md's `Filing` has it; and `body`, a `BodyRef`, the URL and `sha256` of the body it was read from ([TIME-3]). |
-| `Interpreter` | Type alias | A callable that takes a filing's `accession_number`, a `str`, and its `raw_times`, a tuple of `RawTime`, and returns an instant or `None` ([TIME-6], [TIME-13]). |
+| `Interpreter` | Type alias | A callable that takes two positional arguments, a filing's `accession_number`, a `str`, and its `raw_times`, a tuple of `RawTime`, and returns an instant or `None`: `Callable[[str, tuple[RawTime, ...]], datetime \| None]` ([TIME-6], [TIME-13]). |
 | `submissions_utc(accession_number, raw_times)` | Function | An interpreter that reads `submissions`' `acceptanceDateTime` as the UTC instant it states ([TIME-7], [TIME-10]). |
 | `header_in_zone(zone)` | Function | Returns an interpreter that reads the header's digits as local time in `zone`, a `str`, a time zone's IANA name, such as `"America/New_York"` ([TIME-8], [TIME-11]). |
 
@@ -123,15 +123,21 @@ the body it was read from by fetching.md's `BodyRef` ([READ-1]).
   immutable and hashable, equal to another only with the same fields, and
   has no order, so it's compared as a time only through an interpreter
   ([TIME-5]). An interpreter that `header_in_zone` returns is immutable,
-  and equal to another for the same zone, with the same hash. Each of the
-  library's interpreters has a `repr` that names it, and the zone of one
-  that `header_in_zone` returns, as `header_in_zone('America/New_York')`.
-- **TIME-13** (rule) The library calls an interpreter with a filing's
-  accession number and a tuple of its raw times, as
-  [`facts.md`'s ASOF-2][ASOF-2] gives each filing to it: at most one from
-  each source, the header's before `submissions`'. Wherever the library
-  gives a filing's raw times, as in `Filing.raw_times`, they're in that
-  order.
+  and equal to another, with the same hash, only when both were returned
+  for the same `zone` string, as given. Zones aren't resolved, so
+  `header_in_zone('US/Eastern')` isn't equal to
+  `header_in_zone('America/New_York')`, though the time zone database
+  makes the first name an alias of the second. Each of the library's
+  interpreters has a `repr` that names it, and for one that
+  `header_in_zone` returns, its `zone` as given, as
+  `header_in_zone('America/New_York')`.
+- **TIME-13** (rule) The library calls an interpreter with two
+  positional arguments, a filing's accession number and then a tuple of
+  its raw times, so an interpreter's parameters can have any names. It
+  gives each filing as [`facts.md`'s ASOF-2][ASOF-2] says, with at most
+  one raw time from each source, the header's before `submissions`'.
+  Wherever the library gives a filing's raw times, as in
+  `Filing.raw_times`, they're in that order.
 - **TIME-14** (rule) Where the library takes an instant, from the caller
   as an answer's T ([ASOF-1]) or from an interpreter, it takes a
   `datetime.datetime` with a time zone, one whose `utcoffset()` isn't
@@ -149,9 +155,10 @@ the body it was read from by fetching.md's `BodyRef` ([READ-1]).
 - **TIME-15** (rule) An argument this document refuses raises
   `ValueError`: a `RawTime` whose `source` is neither `"header"` nor
   `"submissions"`; a `zone` that Python's `zoneinfo` can't find, given to
-  `header_in_zone`; and raw times that hold more than one from a source,
-  given to one of the library's interpreters, which the library never
-  gives it ([TIME-13]).
+  `header_in_zone`; and, given to one of the library's interpreters, raw
+  times that hold more than one from a source, or one whose
+  `accession_number` isn't the accession number given with them, neither
+  of which the library gives it ([TIME-13]).
 
 ## 6. Index
 
@@ -169,7 +176,7 @@ the body it was read from by fetching.md's `BodyRef` ([READ-1]).
 | TIME-11 | rule | tests | A header time that isn't 14 digits, or names no local time in the zone or no instant, gives nothing. |
 | TIME-9 | rule | tests | There is no default interpreter; the caller passes one. |
 | TIME-12 | rule | tests | The package gives §5's functions and types; an instant is a UTC `datetime`. |
-| TIME-13 | rule | tests | An interpreter is given a filing's accession number and its raw times, the header's first. |
+| TIME-13 | rule | tests | An interpreter is given, positionally, a filing's accession number and its raw times, the header's first. |
 | TIME-14 | rule | tests | An instant taken in any zone is read in UTC, within years 1 to 9999; any other T or result raises. |
 | TIME-15 | rule | tests | Refused arguments raise `ValueError`. |
 
