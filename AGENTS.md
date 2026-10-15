@@ -14,7 +14,7 @@ the model for this one.
 
 | Document | Governs |
 | --- | --- |
-| [`spec/fetching.md`](spec/fetching.md) | How the library requests EDGAR's feeds, and its cache, as numbered statements with an index. |
+| [`spec/fetching.md`](spec/fetching.md) | How the library requests EDGAR's feeds, and its cache; and the functions and types a caller uses to read a body, from a cache or from bodies the caller gives, and the errors a read raises, as numbered statements with an index. |
 | [`spec/times.md`](spec/times.md) | Filings' acceptance times, as EDGAR gives them and as instants. |
 | [`spec/facts.md`](spec/facts.md) | Each `companyfacts` value as a fact, with its key and the raw acceptance times of the filing that reported it; what "as of T" returns; what an answer records about its inputs; and the functions and types a caller uses for facts, as numbered statements with an index. |
 | `edgar-data-pipeline`'s [findings] | Nothing here. They record what EDGAR's feeds do, each finding with an ID from `SRC-1` onward and the stored versions that show it. This repository's specifications depend on EDGAR only through these findings. |
@@ -27,7 +27,7 @@ Each document makes one kind of claim, and its directory says which.
 
 ```text
 spec/                    normative: numbered statements that code and tests cite
-  fetching.md            requests and the cache
+  fetching.md            requests, the cache, and reading a body
   times.md               acceptance times
   facts.md               facts, and what "as of T" returns
   NAME.md                one per component, or boundary between components
@@ -72,9 +72,11 @@ docs/
 - **Every statement has an ID, and its tests carry it.** Mark each test with
   the IDs it checks, as `@pytest.mark.spec("CLIENT-5")`. A new statement
   gets the next unused number in its area, and IDs are never reused or
-  renumbered. The first code adds a test that fails if a statement in an
-  index has no test, or a marker names no statement, as
-  `edgar-data-pipeline`'s `tests/test_spec_coverage.py` does.
+  renumbered. The first code adds `tests/test_spec_coverage.py`, which
+  fails if a statement in an index has no test, or a marker names no
+  statement, as `edgar-data-pipeline`'s does. A statement whose tests a
+  later task in the plan writes is listed there with that task, until the
+  tests exist ([`fetching.md`'s §3](spec/fetching.md#3-statement-ids)).
 - **Don't build undocumented source behavior into code.** If EDGAR does
   something no finding records, report it. The finding is recorded in
   `edgar-data-pipeline`.
