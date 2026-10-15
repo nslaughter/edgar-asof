@@ -193,18 +193,28 @@ retired statement stays in the index.
 
 ### Version 1.0.0
 
-Version 1.0.0 changes what two statements mean, and settles what two
-others left open:
+Version 1.0.0 is a major version because it changes what an interpreter
+takes, and which instant TIME-7's interpreter returns for some text, and
+either change alone would make it one. It also extends TIME-3 to bodies
+the caller gives, settles what TIME-8 left open, and adds
+[§5](#5-functions-and-types)'s functions and types ([TIME-12] to
+[TIME-15]), none of which would need a major version alone:
 
 - **An interpreter also takes its filing's accession number** ([TIME-6]),
   so that it can place a filing with no raw time, which facts.md gives it
   as it gives any other ([ASOF-2]). Version 0.1.0 gave it only the raw
   times, which name their filing only when there is one.
-- **A raw time read from a body the caller gives** keeps that body's URL
-  and SHA-256 ([TIME-3]), where version 0.1.0 named only a cached body.
 - **TIME-7's interpreter reads only the form the findings record**
-  ([TIME-10]), and **TIME-8's returns nothing for digits that name no
-  local time in its zone** ([TIME-11]), which version 0.1.0 didn't say.
+  ([TIME-10]). Version 0.1.0's read an `acceptanceDateTime` as the instant
+  it states, and named no form, so one that states an instant in another
+  form, such as `2025-10-31T14:01:26Z`, without milliseconds, gave that
+  instant, and now gives nothing.
+- **A raw time read from a body the caller gives** keeps that body's URL
+  and SHA-256 ([TIME-3]), where version 0.1.0 named only a cached body. A
+  raw time read from a cache keeps what version 0.1.0 gave it.
+- **TIME-8's interpreter returns nothing for a header time that names no
+  local time in its zone, or no instant** ([TIME-11]), which version 0.1.0
+  didn't say.
 
 [0009]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/docs/decisions/0009-read-edgar-through-a-public-point-in-time-library.md
 [Times]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/docs/design.md#times
@@ -229,3 +239,4 @@ others left open:
 [TIME-12]: #5-functions-and-types
 [TIME-13]: #5-functions-and-types
 [TIME-14]: #5-functions-and-types
+[TIME-15]: #5-functions-and-types
