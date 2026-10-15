@@ -26,6 +26,10 @@ REACHING = {
     "connect": "with socket.socket() as s: s.connect(('192.0.2.1', 443))",
     "connect_ex": "with socket.socket() as s: s.connect_ex(('192.0.2.1', 443))",
     "sendto": "with socket.socket(type=socket.SOCK_DGRAM) as s: s.sendto(b'', ('192.0.2.1', 53))",
+    "sendmsg": (
+        "with socket.socket(type=socket.SOCK_DGRAM) as s:"
+        " s.sendmsg([b''], [], 0, ('192.0.2.1', 53))"
+    ),
     "getaddrinfo": "socket.getaddrinfo('edgar-asof.invalid', 443)",
     "gethostbyname": "socket.gethostbyname('edgar-asof.invalid')",
     "gethostbyname_ex": "socket.gethostbyname_ex('edgar-asof.invalid')",
@@ -48,7 +52,7 @@ def offline(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         reach.__name__ = name
         return reach
 
-    for name in ("connect", "connect_ex", "sendto"):
+    for name in ("connect", "connect_ex", "sendto", "sendmsg"):
         monkeypatch.setattr(socket.socket, name, stand_in(name))
     for name in (
         "getaddrinfo",
@@ -133,6 +137,16 @@ def test_a_test_may_reach_this_host(pytester: pytest.Pytester) -> None:
                     with socket.create_connection((host, port)):
                         pass
 
+        def test_datagrams():
+            with socket.socket(type=socket.SOCK_DGRAM) as server:
+                server.bind(("127.0.0.1", 0))
+                address = server.getsockname()
+                with socket.socket(type=socket.SOCK_DGRAM) as client:
+                    client.sendto(b"", address)
+                    client.sendmsg([b""], [], 0, address)
+                    client.connect(address)
+                    client.sendmsg([b""])
+
         def test_unix_socket():
             with socket.socket(socket.AF_UNIX) as server:
                 server.bind("guard.sock")
@@ -142,4 +156,4 @@ def test_a_test_may_reach_this_host(pytester: pytest.Pytester) -> None:
         """,
     )
 
-    result.assert_outcomes(passed=3)
+    result.assert_outcomes(passed=4)

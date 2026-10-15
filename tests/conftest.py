@@ -18,9 +18,12 @@ from typing import Any
 
 import pytest
 
-# The socket methods that send to an address they're given, and the
-# functions that look up a name or an address.
-SENDING = ("connect", "connect_ex", "sendto")
+# The socket methods that send to an address they're given, each with where
+# the address is among its arguments. `sendmsg` may leave out its address,
+# the fourth, and then sends to the peer that `connect` checked, as `send`
+# does. Windows has no `sendmsg`.
+SENDING = {"connect": 0, "connect_ex": 0, "sendto": -1, "sendmsg": 3}
+# The functions that look up a name or an address.
 LOOKING_UP = ("getaddrinfo", "gethostbyname", "gethostbyname_ex", "gethostbyaddr", "getnameinfo")
 
 guard = pytest.MonkeyPatch()
@@ -47,11 +50,15 @@ def refuse(what: str) -> None:
     )
 
 
-def sending(method: Callable[..., Any]) -> Callable[..., Any]:
-    """A socket method that refuses an address of another host, its last argument."""
+def sending(method: Callable[..., Any], at: int) -> Callable[..., Any]:
+    """A socket method that refuses an address of another host, its argument `at`."""
 
     def guarded(self: socket.socket, *args: Any) -> Any:
-        address = args[-1]
+        try:
+            address = args[at]
+        except IndexError:
+            # No address: `sendmsg` sends to the socket's peer.
+            return method(self, *args)
         local = isinstance(address, tuple) and is_local(address[0])
         if self.family != socket.AF_UNIX and not local:
             refuse(f"{method.__name__} to {address!r}")
@@ -77,8 +84,9 @@ def looking_up(function: Callable[..., Any]) -> Callable[..., Any]:
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    for name in SENDING:
-        guard.setattr(socket.socket, name, sending(getattr(socket.socket, name)))
+    for name, at in SENDING.items():
+        if hasattr(socket.socket, name):
+            guard.setattr(socket.socket, name, sending(getattr(socket.socket, name), at))
     for name in LOOKING_UP:
         guard.setattr(socket, name, looking_up(getattr(socket, name)))
 
