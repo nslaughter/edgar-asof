@@ -72,7 +72,7 @@ docs/
 - **Every statement has an ID, and its tests carry it.** Mark each test with
   the IDs it checks, as `@pytest.mark.spec("CLIENT-5")`. A new statement
   gets the next unused number in its area, and IDs are never reused or
-  renumbered. The first code adds `tests/test_spec_coverage.py`, which
+  renumbered. `tests/test_spec_coverage.py` reads every `spec/*.md`, and
   fails if a statement in an index has no test, or a marker names no
   statement, as `edgar-data-pipeline`'s does. A statement whose tests a
   later task in the plan writes is listed there with that task, until the
@@ -82,7 +82,9 @@ docs/
   `edgar-data-pipeline`.
 - **Tests never reach the network.** They use a local server or stored
   versions, such as a snapshot store read as a cache
-  ([CACHE-5](spec/fetching.md#6-the-cache)).
+  ([CACHE-5](spec/fetching.md#6-the-cache)). A guard in
+  `tests/conftest.py` fails any test that connects to, sends to, or looks
+  up a host other than this one.
 - **Send requests to the SEC only when the owner asks for that run.** Never
   put a user agent in code, tests, records, commits, or pull requests.
 - **Cite the source.** Data read by this library comes from the U.S.
@@ -94,8 +96,16 @@ docs/
 
 ## Commands
 
-None yet. The first code sets up the project with `uv`, with a format
-check, a lint, a type check, and tests, as `edgar-data-pipeline` has.
+| Task | Command |
+| --- | --- |
+| Install the development environment | `uv sync` |
+| Format check | `uv run ruff format --check .` |
+| Lint | `uv run ruff check .` |
+| Type check | `uv run mypy` |
+| Tests | `uv run pytest` |
+
+The `CI` workflow runs the four checks on each pull request, and on each
+push to `main`, on Python 3.12, 3.13, and 3.14.
 
 ## Commits and pull requests
 
@@ -168,10 +178,10 @@ task and nothing beyond it.
    task ([rules](#rules)).
 4. **Make a worktree.** Create the branch `<area>/<id>-<short-name>` from
    `origin/main` in a git worktree of its own, outside the main checkout,
-   and run `uv sync` in it once the project is set up. `<id>` is the
-   task's ID in lowercase, so other agents see that the task is taken
-   (step 2). `<area>` is the directory the task mainly changes, such as
-   `spec`, `docs`, `src`, or `tests`.
+   and run `uv sync` in it. `<id>` is the task's ID in lowercase, so
+   other agents see that the task is taken (step 2). `<area>` is the
+   directory the task mainly changes, such as `spec`, `docs`, `src`, or
+   `tests`.
 5. **Read for the task.** Follow [read these first](#read-these-first),
    and read closely what the task names: the statements and their tests,
    the findings and the stored versions they cite, and the decision
@@ -203,10 +213,9 @@ task and nothing beyond it.
    rebases onto `origin/main` once the other merges: it keeps both tasks'
    entries, and names the next task again.
 9. **Verify.** Run the checks in [commands](#commands): the format check,
-   the lint, the type check, and the tests, once the first code sets them
-   up. Check that each new test fails without the behavior it covers.
-   Requests to the SEC wait for the owner. Report only what you ran, with
-   its outcome.
+   the lint, the type check, and the tests. Check that each new test
+   fails without the behavior it covers. Requests to the SEC wait for the
+   owner. Report only what you ran, with its outcome.
 10. **Open the pull request.** Commit as
     [commits and pull requests](#commits-and-pull-requests) says. Push the
     branch, and open the pull request with `gh pr create`, under a title
