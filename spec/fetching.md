@@ -1,6 +1,6 @@
 # Specification: fetching and the cache
 
-**Status:** Version 1.0.0, draft, October 14, 2026. This document governs
+**Status:** Version 1.0.0, draft, October 15, 2026. This document governs
 how `edgar-asof` requests EDGAR's feeds, keeps what it receives, and reads
 a body, from its cache or from the caller. Where code and this document
 disagree, the code is wrong or this document needs a new version; say
@@ -153,7 +153,7 @@ records are found by feed ([CACHE-5]):
 
 | Feed | URLs | Read for |
 | --- | --- | --- |
-| `submissions` | `https://data.sec.gov/submissions/CIK##########.json`, and the further files it names in `filings.files`, such as `CIK0000320193-submissions-001.json` ([SRC-10]) | Each filing and its acceptance time ([`times.md`](times.md)) |
+| `submissions` | `https://data.sec.gov/submissions/CIK##########.json`, and the further files it names in `filings.files`, such as `CIK0000320193-submissions-001.json` ([SRC-10]), each at `https://data.sec.gov/submissions/NAME` ([SRC-21]) | Each filing and its acceptance time ([`times.md`](times.md)) |
 | `companyfacts` | `https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json` | The values a company reported, each with the accession number of the filing that reported it ([SRC-9]) |
 | `filings` | A filing's header, `https://www.sec.gov/Archives/edgar/data/CIK/ACCESSION/ACCESSION-WITH-DASHES-index-headers.html` | The acceptance time as the header gives it ([SRC-1]) |
 
@@ -161,6 +161,11 @@ records are found by feed ([CACHE-5]):
 header's URL, `CIK` is the company's CIK without them, and `ACCESSION` is
 the accession number without its dashes. An accession number can begin
 with another filer's CIK, such as a filing agent's ([SRC-2]).
+
+In a further file's URL, `NAME` is the `name` that `filings.files` gives
+the file. So that a URL can be checked before anything is read
+([READ-4]), any single path segment is taken as a name: one or more
+characters other than `/`, `?`, and `#`, and neither `.` nor `..`.
 
 - **CLIENT-15** (rule) A fetch's record goes in the log of the feed its URL
   belongs to, named as in the table.
@@ -367,6 +372,10 @@ the library reads:
   the caller gives.
 - **A read checks the object it reads** against its SHA-256, and fails on
   a log or an object it can't read ([CACHE-10]).
+- **A further file's URL is allowed by its form** ([§5](#5-feeds),
+  [CLIENT-1]), `https://data.sec.gov/submissions/` followed by any single
+  path segment, where version 0.1.0 allowed only the files that
+  `submissions` names in `filings.files`, and gave no form for their URLs.
 
 [0009]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/docs/decisions/0009-read-edgar-through-a-public-point-in-time-library.md
 [store]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/spec/snapshots.md
@@ -375,6 +384,7 @@ the library reads:
 [SRC-4]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-9]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-10]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
+[SRC-21]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [FACT-2]: facts.md#4-reading-a-companys-facts
 [FACT-5]: facts.md#4-reading-a-companys-facts
 [CLIENT-1]: #4-requests
@@ -401,5 +411,6 @@ the library reads:
 [CACHE-10]: #6-the-cache
 [READ-2]: #8-functions-and-types
 [READ-3]: #8-functions-and-types
+[READ-4]: #8-functions-and-types
 [READ-5]: #8-functions-and-types
 [READ-6]: #8-functions-and-types
