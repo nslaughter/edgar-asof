@@ -1,6 +1,6 @@
 # Specification: facts
 
-**Status:** Version 0.1.0, draft, October 14, 2026. This document governs
+**Status:** Version 1.0.0, draft, October 17, 2026. This document governs
 what `edgar-asof` makes of a company's `companyfacts`: each value as a
 fact, joined to the raw acceptance times of the filing that reported it;
 what "as of T" returns; what an answer records about its inputs; and the
@@ -15,11 +15,18 @@ Fowler's [Bitemporal History]: its period, when it was true, and the
 acceptance time of the filing that reported it, when it became known. The
 library reads its bodies as [`fetching.md`](fetching.md) says, and keeps
 acceptance times raw and turns them into instants as
-[`times.md`](times.md) says, both at version 0.1.0. Data read by this
+[`times.md`](times.md) says, both at version 1.0.0. Data read by this
 library comes from the U.S. Securities and Exchange Commission's EDGAR
 system; this document depends on how EDGAR behaves only where it cites a
 finding, and in the parts of the feeds' layout that no finding records
 yet, which [§10](#10-open-questions)'s second question names.
+
+Version 1.0.0 uses fetching.md's and times.md's names and types in its
+functions and types ([§8](#8-functions-and-types)), and gives an
+interpreter each filing's accession number as well as its raw times, as
+times.md's version 1.0.0 has an interpreter take them ([ASOF-2]).
+[§11](#11-changes-to-this-document) lists what changed from version
+0.1.0.
 
 ## 1. Guarantees
 
@@ -100,24 +107,26 @@ answer only interprets and compares, and reads nothing
      value names and a list read holds.
 - **FACT-2** (rule) A read of facts takes each body from the source the
   caller passes. From a cache, each body is read as fetching.md says
-  ([CACHE-8]), with the caller's user agent and the cache's directory
-  ([CLIENT-2], [CACHE-9]). From bodies the caller gives, each with its URL,
+  ([CACHE-8], [READ-3]), in the cache's directory, and fetched, when it
+  must be, with the user agent the caller gives the cache ([CLIENT-2],
+  [CACHE-9], [READ-5]). From bodies the caller gives, each with its URL,
   the library fetches nothing, and a read of facts that needs a URL the
-  caller didn't give fails, with an error that names the URL.
+  caller didn't give fails, with an error that names the URL ([READ-2]).
 - **FACT-3** (rule) When the caller asks for a fresh read, the company's
   `companyfacts`, `submissions`, and further files are each read with a
   fresh fetch ([CACHE-8]), and its headers without one. A fresh read from
   bodies the caller gives fails before reading anything, since it can't
-  fetch.
+  fetch ([READ-4]).
 - **FACT-4** (rule) A read of facts fails, and makes no facts, if a read
-  of one of its bodies fails ([CLIENT-8] to [CLIENT-13]), or if a body
-  isn't what this document reads:
+  of one of its bodies fails ([READ-2], [READ-6], [CACHE-10]), or if a
+  body isn't what this document reads:
   - `submissions` is read when it's a JSON object whose `filings.recent`
     holds the columns `accessionNumber` and `acceptanceDateTime`, lists of
     strings of one length, and whose `filings.files` is a list of objects,
-    each with a `name`, and a `filingFrom` and a `filingTo` that are dates,
-    `YYYY-MM-DD`. A further file is read when it's a JSON object that holds
-    those columns itself ([SRC-12]).
+    each with a `name` that [fetching.md's §5](fetching.md#5-feeds) takes
+    as a further file's name, and a `filingFrom` and a `filingTo` that are
+    dates, `YYYY-MM-DD`. A further file is read when it's a JSON object
+    that holds those columns itself ([SRC-12]).
   - `companyfacts` is read when it gives each value under its concept,
     named within its taxonomy, and its unit. Each value has a
     `val` that is a number; an `end` and a `filed` that are dates; and an
@@ -134,9 +143,10 @@ answer only interprets and compares, and reads nothing
   `companyfacts` nests its values, which
   [§10](#10-open-questions)'s second question leaves open.
 - **FACT-5** (rule) A company's facts record, as their inputs, the URL and
-  `sha256` of each body the read of facts took, ordered by URL. A cached
-  body's `sha256` is that of the version read ([CACHE-7]); a given body's
-  is the SHA-256 of its bytes.
+  `sha256` of each body the read of facts took, as fetching.md's read
+  returns them ([READ-3]), ordered by URL. A cached body's `sha256` is
+  that of the version read ([CACHE-7]); a given body's is the SHA-256 of
+  its bytes.
 
 So the same facts can be read again from those versions, given as bodies,
 wherever a cache or a snapshot store keeps them ([CACHE-5]).
@@ -216,14 +226,14 @@ it ([Times]): the latest filing accepted at or before T gives the value
 known, and later filings give the values that came after.
 
 - **ASOF-1** (rule) An answer is for one key, an instant T, and an
-  interpreter, all three of which the caller passes ([TIME-6]). Without an
-  interpreter, or for a key of another company, it raises an error before
-  interpreting anything ([TIME-9]).
+  interpreter, all three of which the caller passes ([TIME-6],
+  [TIME-14]). Without an interpreter, or for a key of another company, it
+  raises an error before interpreting anything ([TIME-9]).
 - **ASOF-2** (rule) For each answer, the library gives the interpreter
-  each filing of the key's facts once, with its raw times, each with its
-  source, whether it has two, one, or none ([TIME-6]). Each fact is placed
-  at the instant the interpreter gives its filing, or unplaced if it gives
-  nothing.
+  each filing of the key's facts once: its accession number, and its raw
+  times, each with its source, whether it has two, one, or none
+  ([TIME-6], [TIME-13]). Each fact is placed at the instant the
+  interpreter gives its filing, or unplaced if it gives nothing.
 - **ASOF-3** (rule) An answer gives each fact of the key in exactly one of
   four parts. Facts placed at or before T are known at T: those at the
   latest such instant are its `known`, and the others its `earlier`. Facts
@@ -270,19 +280,19 @@ ending then and in its 10-Q of 2026-01-30, and 72,634,000,000 in its
 
 The package `edgar_asof` gives a caller the function and types below.
 Where they use a source, a body's URL and `sha256`, a raw time, an
-instant, or an interpreter, the names and types are fetching.md's and
-times.md's, which their next versions give, as the
-[plan](../docs/plan.md)'s T2 and T3 say.
+instant, or an interpreter, they use fetching.md's and times.md's names
+and types: `Source` and `BodyRef` ([READ-1]); and `RawTime`, an instant,
+a `datetime.datetime` in UTC, and `Interpreter` ([TIME-12]).
 
 | Name | Kind | Parameters or fields |
 | --- | --- | --- |
-| `read_facts(cik, source, *, headers=False, fresh=False)` | Function | Reads a company's facts and returns its `CompanyFacts` ([§4](#4-reading-a-companys-facts)). `cik` is the company's CIK, an `int` ([FACT-1]); `source` is where its bodies come from ([FACT-2]); `headers` asks for headers ([FACT-1], [FACT-11]); and `fresh` for a fresh read ([FACT-3]). |
-| `CompanyFacts` | Type | `cik`, an `int`. `inputs`, a tuple of each body's URL and `sha256` ([FACT-5]). `keys()`, a tuple of every key that has a fact, ordered by concept, unit, `end`, and `start`, with no `start` first. `facts(key)`, a tuple of the key's facts, ordered by accession number and then, for the facts of one filing, as [ASOF-5] orders them, and empty for a key with none. `as_of(key, at, interpreter)`, an `Answer` ([§7](#7-as-of-t)). |
+| `read_facts(cik, source, *, headers=False, fresh=False)` | Function | Reads a company's facts and returns its `CompanyFacts` ([§4](#4-reading-a-companys-facts)). `cik` is the company's CIK, an `int` ([FACT-1]); `source`, a `Source`, is where its bodies come from ([FACT-2]); `headers` asks for headers ([FACT-1], [FACT-11]); and `fresh` for a fresh read ([FACT-3]). |
+| `CompanyFacts` | Type | `cik`, an `int`. `inputs`, a tuple of `BodyRef`, each body's URL and `sha256` ([FACT-5]). `keys()`, a tuple of every key that has a fact, ordered by concept, unit, `end`, and `start`, with no `start` first. `facts(key)`, a tuple of the key's facts, ordered by accession number and then, for the facts of one filing, as [ASOF-5] orders them, and empty for a key with none. `as_of(key, at, interpreter)`, an `Answer` ([§7](#7-as-of-t)), where `at` is T, a `datetime.datetime` with a time zone ([TIME-14]), and `interpreter` an `Interpreter` ([TIME-13]). |
 | `Key` | Type | `cik`, an `int`; `concept` and `unit`, each a `str`; `start`, a `datetime.date` or `None`; and `end`, a `datetime.date` ([FACT-7]). |
 | `Fact` | Type | `key`, a `Key`; `value`, an `int` or a `decimal.Decimal` ([FACT-8]); `filing`, a `Filing`; `form`, a `str`; `filed`, a `datetime.date`; `fy`, an `int` or `None`; and `fp` and `frame`, each a `str` or `None` ([FACT-9]). |
-| `Filing` | Type | `accession_number`, a `str`, as `accn` gives it; and `raw_times`, a tuple of the filing's raw times: two, one, or none ([FACT-10] to [FACT-12]). |
-| `Placed` | Type | `fact`, a `Fact`; and `accepted`, the instant the interpreter gave its filing ([ASOF-2]). |
-| `Answer` | Type | `key`, a `Key`; `at`, the instant T; `interpreter`; `earlier`, `known`, and `later`, each a tuple of `Placed`; `unplaced`, a tuple of `Fact`; and `inputs`, its `CompanyFacts`' ([ASOF-3] to [ASOF-6]). |
+| `Filing` | Type | `accession_number`, a `str`, as `accn` gives it; and `raw_times`, a tuple of `RawTime`, the filing's raw times: two, one, or none, the header's first ([FACT-10] to [FACT-12], [TIME-13]). |
+| `Placed` | Type | `fact`, a `Fact`; and `accepted`, the instant the interpreter gave its filing, a `datetime.datetime` in UTC ([ASOF-2], [TIME-14]). |
+| `Answer` | Type | `key`, a `Key`; `at`, the instant T, a `datetime.datetime` in UTC ([TIME-14]); `interpreter`, the `Interpreter` passed; `earlier`, `known`, and `later`, each a tuple of `Placed`; `unplaced`, a tuple of `Fact`; and `inputs`, its `CompanyFacts`' ([ASOF-3] to [ASOF-6]). |
 | `FactsError` | Exception | A body that a read of facts can't read ([FACT-4], [FACT-10]). A header that's read never raises it ([FACT-11]). |
 
 - **FACT-13** (rule) The package `edgar_asof` gives the function and types
@@ -293,12 +303,14 @@ times.md's, which their next versions give, as the
   `ValueError`, before anything is read or interpreted: a CIK out of range
   ([FACT-1]), a fresh read from bodies the caller gives ([FACT-3]), a key
   of another company, given to `facts` or `as_of`, and an interpreter of
-  `None` ([ASOF-1]). A body that
-  a read of facts can't read raises `FactsError`, which names the body's
-  URL ([FACT-4], [FACT-10]); a header that's read never raises it
-  ([FACT-11]). A read of a body that fails raises the error that
-  fetching.md gives it, as does a read of facts that needs a URL the
-  caller didn't give ([FACT-2]).
+  `None` ([ASOF-1]). A T, or an interpreter's result, that times.md
+  refuses raises the error that its [TIME-14] gives. A body that a read of
+  facts can't read raises `FactsError`, which names the body's URL
+  ([FACT-4], [FACT-10]); a header that's read never raises it
+  ([FACT-11]). A read of a body that fails raises the `ReadError` that
+  fetching.md gives it ([READ-6], [CACHE-10]), and a read of facts that
+  needs a URL the caller didn't give raises `BodyNotGivenError` ([FACT-2],
+  [READ-2]).
 
 ## 9. Index
 
@@ -317,13 +329,13 @@ times.md's, which their next versions give, as the
 | FACT-11 | rule | tests | When asked, a listed filing that a value names also has its header's raw time, if its header gives the 14 digits. |
 | FACT-12 | rule | tests | A filing no list holds has no raw time from `submissions`, and its facts are kept. |
 | ASOF-1 | rule | tests | An answer is for a key, T, and an interpreter the caller passes. |
-| ASOF-2 | rule | tests | Each filing is interpreted once; its facts are placed at its instant, or unplaced. |
+| ASOF-2 | rule | tests | Each filing is interpreted once, by its accession number and raw times; its facts are placed at its instant, or unplaced. |
 | ASOF-3 | rule | tests | Each fact is in one of `earlier`, `known`, `later`, and `unplaced`; ties are all `known`. |
 | ASOF-4 | rule | tests | Only T and the instants decide an answer. |
 | ASOF-5 | rule | tests | Each part is in a fixed order, total even among one filing's facts. |
 | ASOF-6 | rule | tests | An answer gives its key, T, interpreter, and inputs. |
 | FACT-13 | rule | tests | The package gives the function and types of §8, immutable. |
-| FACT-14 | rule | tests | Refused arguments raise `ValueError`, and unreadable bodies `FactsError`. |
+| FACT-14 | rule | tests | Refused arguments raise `ValueError`, unreadable bodies `FactsError`, and failed reads fetching.md's errors. |
 
 ## 10. Open questions
 
@@ -351,18 +363,6 @@ times.md's, which their next versions give, as the
 
 ### Left to other specifications
 
-- **fetching.md's next version (the plan's T2):** the names and types of
-  each kind of source, a cache with the caller's user agent and its
-  directory, and bodies the caller gives, each with its URL; of a body's
-  URL and `sha256`, which `inputs` holds; and of the errors a read raises,
-  among them [FACT-2]'s, for a URL the caller didn't give. It also says
-  what bodies the caller gives change in fetching.md's guarantees, which
-  hold every body read to a recorded fetch.
-- **times.md's next version (the plan's T3):** the names and types of raw
-  times, instants, and interpreters, which `Filing.raw_times`,
-  `Placed.accepted`, `Answer.at`, and `as_of`'s interpreter use; and what
-  a raw time read from a body the caller gives keeps, where [TIME-3] names
-  a cached body's URL and `sha256`.
 - **Later versions of this one:** published cases, with their inputs and
   answers (the plan's T10); and facts read from XBRL instances (T11),
   whose keys may need dimensions, which no `companyfacts` value has
@@ -377,6 +377,49 @@ a parameter with a default, or a check is a minor version. Changing the
 meaning of a statement or of a key, or which part of an answer a fact is
 in, is a major version. IDs are never reused, and a retired statement stays
 in the index.
+
+### Version 1.0.0
+
+Version 1.0.0 cites fetching.md and times.md at their version 1.0.0,
+where version 0.1.0 cited both at version 0.1.0. It's a major version
+because of two changes that come with times.md's version 1.0.0, either
+of which alone would make it one: what the library gives an interpreter,
+and which part of an answer a fact can be in through times.md's
+interpreter of `submissions`' time. The rest would need no major version
+alone:
+
+- **An interpreter also takes its filing's accession number** ([ASOF-2]),
+  as times.md's version 1.0.0 has it ([TIME-6]), so that it can place a
+  filing with no raw time. Version 0.1.0 gave it a filing's raw times
+  alone, so an interpreter written for it takes one argument where the
+  library now passes two ([TIME-13]).
+- **Through times.md's interpreter of `submissions`' time, a filing whose
+  `acceptanceDateTime` isn't in the form the findings record is
+  unplaced** ([TIME-10]). Under version 0.1.0, that interpreter placed it
+  at the instant it states, so its facts move from `earlier`, `known`, or
+  `later` to `unplaced` ([ASOF-3]).
+- **[§8](#8-functions-and-types) uses fetching.md's and times.md's names
+  and types,** which version 0.1.0 left to their next versions: `Source`,
+  for `read_facts`' `source`; `BodyRef`, for `CompanyFacts.inputs`;
+  `RawTime`, for `Filing.raw_times`, the header's first; a
+  `datetime.datetime`, for `as_of`'s `at`, and one in UTC for `Answer.at`
+  and `Placed.accepted`; and `Interpreter`, for `as_of`'s interpreter and
+  `Answer.interpreter`. [FACT-14] names the errors that the other two
+  specifications give a read and a T, `BodyNotGivenError` among them.
+- **A further file's name is checked** ([FACT-4]). `submissions` is read
+  only when each `name` in its `filings.files` is one that fetching.md's
+  §5 takes as a further file's, since fetching.md's version 1.0.0 allows
+  a further file's URL by its form ([CLIENT-1]), where its version 0.1.0
+  allowed whatever file `submissions` named.
+- **The statements cite what fetching.md's and times.md's version 1.0.0
+  add:** how a read takes its body and how it fails ([FACT-2] to
+  [FACT-5]), and how an interpreter is called and an instant taken
+  ([ASOF-1], [ASOF-2]). FACT-4 cites the errors of a read ([READ-2],
+  [READ-6], [CACHE-10]), where version 0.1.0 cited fetching.md's CLIENT-8
+  to CLIENT-13, which don't name every way a read now fails, such as a
+  cache it can't read.
+- **"Left to other specifications" no longer lists fetching.md's and
+  times.md's next versions,** whose version 1.0.0 did what it listed.
 
 [0009]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/docs/decisions/0009-read-edgar-through-a-public-point-in-time-library.md
 [Bitemporal History]: https://martinfowler.com/articles/bitemporal-history.html
@@ -394,21 +437,30 @@ in the index.
 [SRC-16]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-17]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-21]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
+[CLIENT-1]: fetching.md#4-requests
 [CLIENT-2]: fetching.md#4-requests
-[CLIENT-8]: fetching.md#4-requests
-[CLIENT-13]: fetching.md#4-requests
 [CACHE-5]: fetching.md#6-the-cache
 [CACHE-7]: fetching.md#6-the-cache
 [CACHE-8]: fetching.md#6-the-cache
 [CACHE-9]: fetching.md#6-the-cache
+[CACHE-10]: fetching.md#6-the-cache
+[READ-1]: fetching.md#8-functions-and-types
+[READ-2]: fetching.md#8-functions-and-types
+[READ-3]: fetching.md#8-functions-and-types
+[READ-4]: fetching.md#8-functions-and-types
+[READ-5]: fetching.md#8-functions-and-types
+[READ-6]: fetching.md#8-functions-and-types
 [TIME-1]: times.md#3-raw-times
 [TIME-2]: times.md#3-raw-times
-[TIME-3]: times.md#3-raw-times
 [TIME-4]: times.md#3-raw-times
 [TIME-6]: times.md#4-interpreters
 [TIME-7]: times.md#4-interpreters
 [TIME-8]: times.md#4-interpreters
 [TIME-9]: times.md#4-interpreters
+[TIME-10]: times.md#4-interpreters
+[TIME-12]: times.md#5-functions-and-types
+[TIME-13]: times.md#5-functions-and-types
+[TIME-14]: times.md#5-functions-and-types
 [FACT-1]: #4-reading-a-companys-facts
 [FACT-2]: #4-reading-a-companys-facts
 [FACT-3]: #4-reading-a-companys-facts
@@ -421,6 +473,7 @@ in the index.
 [FACT-10]: #6-filings-and-their-acceptance-times
 [FACT-11]: #6-filings-and-their-acceptance-times
 [FACT-12]: #6-filings-and-their-acceptance-times
+[FACT-14]: #8-functions-and-types
 [ASOF-1]: #7-as-of-t
 [ASOF-2]: #7-as-of-t
 [ASOF-3]: #7-as-of-t
