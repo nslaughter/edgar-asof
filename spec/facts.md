@@ -123,9 +123,10 @@ answer only interprets and compares, and reads nothing
   - `submissions` is read when it's a JSON object whose `filings.recent`
     holds the columns `accessionNumber` and `acceptanceDateTime`, lists of
     strings of one length, and whose `filings.files` is a list of objects,
-    each with a `name`, and a `filingFrom` and a `filingTo` that are dates,
-    `YYYY-MM-DD`. A further file is read when it's a JSON object that holds
-    those columns itself ([SRC-12]).
+    each with a `name` that [fetching.md's §5](fetching.md#5-feeds) takes
+    as a further file's name, and a `filingFrom` and a `filingTo` that are
+    dates, `YYYY-MM-DD`. A further file is read when it's a JSON object
+    that holds those columns itself ([SRC-12]).
   - `companyfacts` is read when it gives each value under its concept,
     named within its taxonomy, and its unit. Each value has a
     `val` that is a number; an `end` and a `filed` that are dates; and an
@@ -405,6 +406,11 @@ alone:
   and `Placed.accepted`; and `Interpreter`, for `as_of`'s interpreter and
   `Answer.interpreter`. [FACT-14] names the errors that the other two
   specifications give a read and a T, `BodyNotGivenError` among them.
+- **A further file's name is checked** ([FACT-4]). `submissions` is read
+  only when each `name` in its `filings.files` is one that fetching.md's
+  §5 takes as a further file's, since fetching.md's version 1.0.0 allows
+  a further file's URL by its form ([CLIENT-1]), where its version 0.1.0
+  allowed whatever file `submissions` named.
 - **The statements cite what fetching.md's and times.md's version 1.0.0
   add:** how a read takes its body and how it fails ([FACT-2] to
   [FACT-5]), and how an interpreter is called and an instant taken
@@ -431,6 +437,7 @@ alone:
 [SRC-16]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-17]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-21]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
+[CLIENT-1]: fetching.md#4-requests
 [CLIENT-2]: fetching.md#4-requests
 [CACHE-5]: fetching.md#6-the-cache
 [CACHE-7]: fetching.md#6-the-cache
