@@ -385,8 +385,8 @@ where version 0.1.0 cited both at version 0.1.0. It's a major version
 because of two changes that come with times.md's version 1.0.0, either
 of which alone would make it one: what the library gives an interpreter,
 and which part of an answer a fact can be in through times.md's
-interpreter of `submissions`' time. The rest would need no major version
-alone:
+interpreter of `submissions`' time. Those two come first below, and the
+rest would need no major version alone:
 
 - **An interpreter also takes its filing's accession number** ([ASOF-2]),
   as times.md's version 1.0.0 has it ([TIME-6]), so that it can place a
