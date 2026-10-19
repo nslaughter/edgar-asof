@@ -394,10 +394,12 @@ rest would need no major version alone:
   alone, so an interpreter written for it takes one argument where the
   library now passes two ([TIME-13]).
 - **Through times.md's interpreter of `submissions`' time, a filing whose
-  `acceptanceDateTime` isn't in the form the findings record is
-  unplaced** ([TIME-10]). Under version 0.1.0, that interpreter placed it
-  at the instant it states, so its facts move from `earlier`, `known`, or
-  `later` to `unplaced` ([ASOF-3]).
+  `acceptanceDateTime` states an instant in a form other than the one the
+  findings record, such as `2025-10-31T14:01:26Z`, without milliseconds,
+  is unplaced** ([TIME-10]). Under version 0.1.0, that interpreter placed
+  it at the instant it states, so its facts move from `earlier`, `known`,
+  or `later` to `unplaced` ([ASOF-3]). A filing whose `acceptanceDateTime`
+  states no instant was unplaced under both versions ([TIME-6]).
 - **[§8](#8-functions-and-types) uses fetching.md's and times.md's names
   and types,** which version 0.1.0 left to their next versions: `Source`,
   for `read_facts`' `source`; `BodyRef`, for `CompanyFacts.inputs`;
