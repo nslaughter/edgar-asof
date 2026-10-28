@@ -806,6 +806,20 @@ def test_a_read_that_would_send_validators_first_reads_their_versions_object(
     assert files(tmp_path) == before
 
 
+@pytest.mark.spec("CACHE-10")
+def test_a_fresh_read_that_would_send_no_validators_doesnt_read_the_latest_versions_object(
+    tmp_path: Path,
+) -> None:
+    # A fetch of submissions sends no validators (CLIENT-5), so a fresh read
+    # gets the whole body, and needn't read the one the cache holds.
+    put_version(tmp_path, SUBMISSIONS, A)
+    object_path(tmp_path, A).write_bytes(A)
+
+    # Until T6, in docs/plan.md, a read that would fetch raises this.
+    with pytest.raises(NotImplementedError):
+        read_body(SUBMISSIONS, Cache(tmp_path, user_agent=USER_AGENT), fresh=True)
+
+
 # The function and types of reading
 
 
