@@ -202,14 +202,23 @@ def attempt(
     named: _cache.Stored | None,
     number: int,
 ) -> Attempt:
-    """Request the writer's URL once, and store the body of a 200."""
+    """Request the writer's URL once, and store the body of a 200.
+
+    A request line or header that http.client refuses, which sends nothing,
+    raises its error, and isn't an attempt.
+    """
     parts = urlsplit(writer.url)
     assert parts.hostname is not None
     tried = Attempt(datetime.now(UTC))
     connection = connect(parts.hostname, TIMEOUT)
     try:
+        # Putting the request checks it, and sends nothing until the end of
+        # its headers.
+        connection.putrequest("GET", parts.path, skip_host=True, skip_accept_encoding=True)
+        for name, value in ({"Host": parts.hostname} | headers).items():
+            connection.putheader(name, value)
         try:
-            connection.request("GET", parts.path, headers={"Host": parts.hostname} | headers)
+            connection.endheaders()
             response = connection.getresponse()
         except (OSError, http.client.HTTPException) as err:
             tried.error = f"no response: {err!r}"

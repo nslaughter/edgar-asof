@@ -999,6 +999,29 @@ def test_each_fetch_appends_exactly_one_record_after_the_object_it_names(
     assert placed == [True] * 5
 
 
+@pytest.mark.spec("CLIENT-14")
+@pytest.mark.parametrize(
+    ("url", "user_agent"),
+    [
+        pytest.param(
+            "https://data.sec.gov/submissions/a b.json", USER_AGENT, id="a space in the path"
+        ),
+        pytest.param(f"{FURTHER}é", USER_AGENT, id="a path that isn't ASCII"),
+        pytest.param(SUBMISSIONS, f"{USER_AGENT}\r\nX-Other: 1", id="a header split in two"),
+    ],
+)
+def test_a_request_that_http_client_refuses_is_no_attempt(
+    tmp_path: Path, edgar: Edgar, url: str, user_agent: str
+) -> None:
+    edgar.serve(url, Reply(body=A))
+
+    with pytest.raises((ValueError, http.client.HTTPException)):
+        read_body(url, Cache(tmp_path, user_agent=user_agent))
+
+    assert edgar.requests == []
+    assert log(tmp_path, url) == []
+
+
 @pytest.mark.spec("CLIENT-15")
 def test_a_fetchs_record_goes_in_the_log_of_its_urls_feed(tmp_path: Path, edgar: Edgar) -> None:
     for url in (SUBMISSIONS, FURTHER, COMPANYFACTS, HEADER):
