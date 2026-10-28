@@ -1,8 +1,11 @@
 """The feeds the library reads, and the form of each one's URLs.
 
 fetching.md's §5 gives them. A URL of none of them is one that CLIENT-1
-doesn't allow. A CIK is an integer from 1 to 9,999,999,999, as facts.md's
-FACT-1 gives it: in ten digits with leading zeros, or without them.
+doesn't allow. In a `companyfacts` URL and a filing header's, a CIK is an
+integer from 1 to 9,999,999,999, as facts.md's FACT-1 gives it: in ten
+digits with leading zeros in the first, and without them in the second. A
+`submissions` URL takes any single path segment, as §5 gives it for the
+further files, so its CIK isn't checked.
 """
 
 from __future__ import annotations
