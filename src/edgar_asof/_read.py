@@ -8,9 +8,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
+from typing import Any
 
-from edgar_asof import _cache
-from edgar_asof._errors import BodyNotGivenError
+from edgar_asof import _cache, _client
+from edgar_asof._errors import BodyNotGivenError, FetchError, ForbiddenError, NoUserAgentError
 from edgar_asof._feeds import feed
 
 
@@ -92,13 +93,45 @@ def read_body(url: str, source: Source, *, fresh: bool = False) -> Body:
 
 
 def read_cache(url: str, cache: Cache, *, fresh: bool) -> Body:
-    """Read a URL's latest version in a cache (CACHE-8)."""
+    """Read a URL's latest version in a cache, and fetch it when CACHE-8 calls for a fetch."""
     record = _cache.latest(cache.directory, url)
     if record is not None and not fresh:
-        sha256: str = record["sha256"]
-        return Body(url, sha256, _cache.read_object(cache.directory, url, sha256))
+        return named_body(url, cache, record)
     if record is not None and _cache.validators(record):
         # A 304 to the conditional request names this version, so its object
         # is read before anything is requested (CACHE-10).
         _cache.read_object(cache.directory, url, record["sha256"])
-    raise NotImplementedError("a read that fetches into a cache is T6's, in docs/plan.md")
+    # What keeps the read from fetching, in READ-6's order.
+    if _client.PACER.forbidden:
+        raise ForbiddenError(url, _client.FORBIDDEN)
+    _cache.refuse_snapshot_store(cache.directory, url)
+    if cache.user_agent is None:
+        raise NoUserAgentError(url, "the read would fetch, and the cache has no user agent")
+    with _cache.writing(cache.directory, url) as writer:
+        # Another process may have fetched the URL while this one waited for
+        # the lock (READ-5).
+        record = _cache.latest(cache.directory, url)
+        if record is not None and not fresh:
+            return named_body(url, cache, record)
+        validators = _cache.validators(record) if record is not None else {}
+        named: Body | None = None
+        if record is not None and validators:
+            named = named_body(url, cache, record)
+        stored = _cache.Stored(named.sha256, len(named.content)) if named is not None else None
+        fetched = _client.fetch(writer, cache.user_agent, validators, stored)
+    if fetched["sha256"] is None:
+        raise FetchError(
+            url,
+            f"the fetch stored nothing: status {fetched['status']}, error {fetched['error']!r}",
+            status=fetched["status"],
+            error=fetched["error"],
+        )
+    if fetched["status"] == 304 and named is not None:
+        return named
+    return named_body(url, cache, fetched)
+
+
+def named_body(url: str, cache: Cache, record: dict[str, Any]) -> Body:
+    """The body of the version that a record names (READ-3, READ-5)."""
+    sha256: str = record["sha256"]
+    return Body(url, sha256, _cache.read_object(cache.directory, url, sha256))
