@@ -41,7 +41,8 @@ class Bodies:
     A read from them requests nothing and writes nothing (READ-2).
     """
 
-    bodies: Mapping[str, bytes]
+    # Each body can be megabytes.
+    bodies: Mapping[str, bytes] = field(repr=False)
 
     def __init__(self, bodies: Mapping[str, bytes]) -> None:
         copied = dict(bodies)

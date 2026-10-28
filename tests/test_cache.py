@@ -945,6 +945,14 @@ def test_a_caches_directory_is_a_path_and_its_repr_doesnt_show_its_user_agent(
     assert "test@example.com" not in repr(cache)
 
 
+def test_the_repr_of_a_body_and_of_bodies_leaves_out_the_bodies() -> None:
+    # A body can be megabytes.
+    body = b"a body of the test " * 1000
+
+    assert "a body of the test" not in repr(Body(SUBMISSIONS, sha(body), body))
+    assert "a body of the test" not in repr(Bodies({SUBMISSIONS: body, COMPANYFACTS: body}))
+
+
 # Reading bodies the caller gives
 
 
