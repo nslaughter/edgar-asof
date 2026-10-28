@@ -768,6 +768,21 @@ def test_an_object_a_read_cant_read_raises_cache_error(
 
 
 @pytest.mark.spec("CACHE-10")
+def test_an_empty_object_isnt_gzip_data_even_for_the_empty_body(tmp_path: Path) -> None:
+    put_version(tmp_path, SUBMISSIONS, b"")
+    # The empty body's gzip data is read.
+    assert read_body(SUBMISSIONS, Cache(tmp_path)).content == b""
+    path = object_path(tmp_path, b"")
+    path.write_bytes(b"")
+
+    with pytest.raises(CacheError) as raised:
+        read_body(SUBMISSIONS, Cache(tmp_path))
+
+    assert (raised.value.url, raised.value.path) == (SUBMISSIONS, path)
+    assert "isn't gzip data" in str(raised.value)
+
+
+@pytest.mark.spec("CACHE-10")
 @pytest.mark.parametrize(
     "validators",
     [

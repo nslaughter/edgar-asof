@@ -138,6 +138,10 @@ def read_object(directory: Path, url: str, sha256: str) -> bytes:
         raise CacheError(
             url, f"can't read the version's object: {err.strerror}", path=path
         ) from err
+    # gzip data holds at least one member, but gzip.decompress reads an empty
+    # file as no members, and so as the empty body.
+    if not compressed:
+        raise CacheError(url, "the version's object isn't gzip data", path=path)
     try:
         body = gzip.decompress(compressed)
     except (OSError, EOFError, zlib.error) as err:
