@@ -213,7 +213,7 @@ def problems(directory: Path) -> list[str]:
             found.append(f"CACHE-1 {name}: not part of a cache's layout")
     named: set[str] = set()
     for log in sorted(directory.glob("feeds/*/versions.jsonl")):
-        latest: dict[str, str] = {}
+        latest: dict[str, dict[str, Any]] = {}
         for number, line in enumerate(log.read_text(encoding="utf-8").splitlines(), 1):
             where = f"{log.relative_to(directory).as_posix()}:{number}"
             record = json.loads(line)
@@ -233,13 +233,17 @@ def problems(directory: Path) -> list[str]:
                     found.append(f"REC-3 {where}: no object {record['object']}")
                 elif record["bytes"] != len(body):
                     found.append(f"REC-8 {where}: bytes {record['bytes']}")
-                latest[record["url"]] = record["sha256"]
+                latest[record["url"]] = record
     found += [f"OBJ-3 {name}: named by no record" for name in sorted(set(bodies) - named)]
     return found
 
 
-def outcome(record: dict[str, Any], latest: str | None) -> list[str]:
-    """The store's REC-3 to REC-7 that a record breaks, given its URL's latest earlier version."""
+def outcome(record: dict[str, Any], latest: dict[str, Any] | None) -> list[str]:
+    """The store's REC-3 to REC-7 that a record breaks.
+
+    `latest` is the URL's latest earlier record with a `sha256`, whose
+    validators a conditional request sends (CLIENT-5).
+    """
     broken = []
     status, error, sha256 = record["status"], record["error"], record["sha256"]
     stored = [record[field] is not None for field in ("sha256", "bytes", "object")]
@@ -249,7 +253,11 @@ def outcome(record: dict[str, Any], latest: str | None) -> list[str]:
         broken.append("REC-3")
     if status == 200 and error is None and not sha256:
         broken.append("REC-4")
-    if status == 304 and ((sha256 and sha256 != latest) or (not sha256 and error is None)):
+    names_latest = latest is not None and sha256 == latest["sha256"]
+    sent_validators = latest is not None and bool(latest["etag"] or latest["last_modified"])
+    if status == 304 and (
+        (sha256 and not (names_latest and sent_validators)) or (not sha256 and error is None)
+    ):
         broken.append("REC-5")
     if sha256 and (status not in (200, 304) or (status == 200 and error is not None)):
         broken.append("REC-6")
@@ -292,6 +300,7 @@ def test_a_cache_the_library_writes_has_the_stores_layout_objects_and_records(
 def test_the_checker_finds_what_breaks_a_cache(tmp_path: Path) -> None:
     tool = "edgar-asof@0.1.0"
     put_version(tmp_path, SUBMISSIONS, A, tool=tool)
+    put_version(tmp_path, SUBMISSIONS, A, status=304, tool=tool)
     put_version(tmp_path, SUBMISSIONS, None, status=None, tool=tool)
     put_version(tmp_path, SUBMISSIONS, None, status=200, tool=tool)
     put_version(tmp_path, SUBMISSIONS, B, status=304, tool=tool)
@@ -314,6 +323,8 @@ def test_the_checker_finds_what_breaks_a_cache(tmp_path: Path) -> None:
         "REC-8 feeds/companyfacts/versions.jsonl",
         "REC-6 feeds/filings/versions.jsonl",
         "REC-3 feeds/filings/versions.jsonl",
+        # A 304 names a version whose record has no validators.
+        "REC-5 feeds/submissions/versions.jsonl",
         "REC-7 feeds/submissions/versions.jsonl",
         "REC-4 feeds/submissions/versions.jsonl",
         "REC-5 feeds/submissions/versions.jsonl",
@@ -331,6 +342,7 @@ def test_the_checker_finds_what_breaks_a_cache(tmp_path: Path) -> None:
         pytest.param(200, None, None, id="REC-4 a 200 without an error names no body"),
         pytest.param(304, None, None, id="REC-5 a 304 names nothing without an error"),
         pytest.param(304, None, B, id="REC-5 a 304 names another version than the latest"),
+        pytest.param(304, None, A, id="REC-5 a 304 names a version whose record has no validators"),
         pytest.param(404, None, A, id="REC-6 a 404 names a body"),
         pytest.param(200, "body cut short", A, id="REC-6 a 200 with an error names a body"),
         pytest.param(None, None, None, id="REC-7 no response without an error"),
@@ -451,8 +463,8 @@ def test_records_are_only_appended_and_objects_only_added(tmp_path: Path) -> Non
     steps: list[Callable[[], object]] = [
         lambda: fetch(tmp_path, SUBMISSIONS, 200, body=A),
         lambda: fetch(tmp_path, SUBMISSIONS, 200, body=B),
-        lambda: fetch(tmp_path, SUBMISSIONS, 200, body=A),
-        lambda: fetch(tmp_path, SUBMISSIONS, 304, names=A),
+        lambda: fetch(tmp_path, SUBMISSIONS, 200, body=A, etag='"a"'),
+        lambda: fetch(tmp_path, SUBMISSIONS, 304, names=A, etag='"a"'),
         lambda: fetch(tmp_path, SUBMISSIONS, 404),
         lambda: fetch(tmp_path, COMPANYFACTS, 200, body=B),
         lambda: read_body(SUBMISSIONS, Cache(tmp_path)),

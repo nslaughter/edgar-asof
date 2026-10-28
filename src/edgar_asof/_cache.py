@@ -304,6 +304,9 @@ class Writer:
             earlier = latest(self.directory, self.url)
             if earlier is None or earlier["sha256"] != stored.sha256:
                 return "a 304 names the URL's latest earlier version (REC-5)"
+            # A conditional request sends that version's validators (CLIENT-5).
+            if not validators(earlier):
+                return "a 304 to a request that sent no validators names nothing (REC-5)"
         if stored is not None and not (status == 304 or (status == 200 and error is None)):
             return f"a {status} with error {error!r} names no body (REC-6)"
         return ""
