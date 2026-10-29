@@ -201,12 +201,18 @@ def attempt(
     headers: dict[str, str],
     named: _cache.Stored | None,
     number: int,
-) -> Attempt:
+) -> Attempt | None:
     """Request the writer's URL once, and store the body of a 200.
 
-    A request line or header that http.client refuses, which sends nothing,
-    raises its error, and isn't an attempt.
+    The request starts when the pacer lets it, once its connection is open,
+    and is sent then (CLIENT-7). Returns None, having sent nothing, after a
+    403 to a fetch in the process (CLIENT-9). A request line or header that
+    http.client refuses, which sends nothing, raises its error, and isn't
+    an attempt.
     """
+    # No connection opens after a 403, either.
+    if PACER.forbidden:
+        return None
     parts = urlsplit(writer.url)
     assert parts.hostname is not None
     tried = Attempt(datetime.now(UTC))
@@ -218,6 +224,15 @@ def attempt(
         for name, value in ({"Host": parts.hostname} | headers).items():
             connection.putheader(name, value)
         try:
+            # The connection opens first, and the request is sent when its
+            # turn comes, so that one slow to open sends nothing less than
+            # the interval after another request, or after a 403 that
+            # another received meanwhile.
+            connection.connect()
+            if not PACER.start():
+                return None
+            # A record's requested_at is when its attempt was sent.
+            tried.requested_at = datetime.now(UTC)
             connection.endheaders()
             response = connection.getresponse()
         except (OSError, http.client.HTTPException) as err:
@@ -276,11 +291,12 @@ def fetch(
     attempts = 0
     stopped = False
     while True:
-        if not PACER.start():
+        outcome = attempt(writer, headers, named, attempts + 1)
+        if outcome is None:
             stopped = True
             break
+        tried = outcome
         attempts += 1
-        tried = attempt(writer, headers, named, attempts)
         if tried.retry is None or attempts == ATTEMPTS:
             break
         PACER.sleep(tried.retry)

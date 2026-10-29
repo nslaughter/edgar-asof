@@ -293,6 +293,50 @@ def cache(directory: Path) -> Cache:
     return Cache(directory, user_agent=USER_AGENT)
 
 
+@dataclass
+class SlowToOpen:
+    """Connections to a host that open only when the test lets them."""
+
+    # Set when a connection begins to open, and set by the test to let it.
+    begun: threading.Event = field(default_factory=threading.Event)
+    let: threading.Event = field(default_factory=threading.Event)
+
+
+def slow_to_open(monkeypatch: pytest.MonkeyPatch, host: str) -> SlowToOpen:
+    """Make the client's connections to a host wait to open until the test lets them."""
+    slow = SlowToOpen()
+    local = _client.connect
+
+    def connect(to: str, timeout: float) -> http.client.HTTPConnection:
+        connection = local(to, timeout)
+        if to == host:
+            opens = connection.connect
+
+            def opening() -> None:
+                slow.begun.set()
+                slow.let.wait(timeout=30)
+                opens()
+
+            monkeypatch.setattr(connection, "connect", opening)
+        return connection
+
+    monkeypatch.setattr(_client, "connect", connect)
+    return slow
+
+
+def reading(url: str, source: Cache) -> tuple[threading.Thread, list[Body | Exception]]:
+    """A thread that reads a URL, and what the read returns or raises, once it has."""
+    outcome: list[Body | Exception] = []
+
+    def read() -> None:
+        try:
+            outcome.append(read_body(url, source))
+        except Exception as err:
+            outcome.append(err)
+
+    return threading.Thread(target=read), outcome
+
+
 # Requests
 
 
@@ -593,6 +637,60 @@ def test_requests_from_threads_start_at_least_0_2_seconds_apart_by_the_real_cloc
     assert all(later - earlier > 0.15 for earlier, later in itertools.pairwise(starts))
 
 
+@pytest.mark.spec("CLIENT-7", "CLIENT-14")
+def test_a_request_whose_connection_is_slow_to_open_starts_when_its_open(
+    tmp_path: Path, edgar: Edgar, clock: Clock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_client, "PACER", _client.Pacer(clock=clock.time, sleep=clock.sleep))
+    slow = slow_to_open(monkeypatch, "www.sec.gov")
+    edgar.serve(HEADER, Reply(body=A))
+    edgar.serve(COMPANYFACTS, Reply(body=B))
+    reader, outcome = reading(HEADER, cache(tmp_path / "one"))
+
+    reader.start()
+    assert slow.begun.wait(timeout=30)
+    # While the header's connection opens, another fetch's request starts.
+    read_body(COMPANYFACTS, cache(tmp_path / "two"))
+    # It opens in a later millisecond than the one it began to open in.
+    time.sleep(0.01)
+    opened = datetime.now(UTC)
+    slow.let.set()
+    reader.join(timeout=30)
+
+    assert outcome == [Body(HEADER, sha(A), A)]
+    assert edgar.urls() == [COMPANYFACTS, HEADER]
+    starts = [request.at for request in edgar.requests]
+    assert starts == pytest.approx([0, 0.2])
+    # Its record gives when it was sent, after its connection opened.
+    [record] = log(tmp_path / "one", HEADER)
+    assert record["requested_at"] >= stamp(opened)
+
+
+@pytest.mark.spec("CLIENT-9")
+def test_a_request_whose_connection_opens_after_a_403_isnt_sent(
+    tmp_path: Path, edgar: Edgar, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    slow = slow_to_open(monkeypatch, "www.sec.gov")
+    edgar.serve(HEADER, Reply(body=A))
+    edgar.serve(COMPANYFACTS, Reply(403))
+    reader, outcome = reading(HEADER, cache(tmp_path / "one"))
+
+    reader.start()
+    assert slow.begun.wait(timeout=30)
+    # While the header's connection opens, another fetch receives a 403.
+    with pytest.raises(ForbiddenError):
+        read_body(COMPANYFACTS, cache(tmp_path / "two"))
+    slow.let.set()
+    reader.join(timeout=30)
+
+    [raised] = outcome
+    assert isinstance(raised, ForbiddenError)
+    assert raised.url == HEADER
+    assert edgar.urls() == [COMPANYFACTS]
+    # It made no attempt, so it appended no record.
+    assert log(tmp_path / "one", HEADER) == []
+
+
 @pytest.mark.spec("CLIENT-8")
 @pytest.mark.parametrize(
     "failure",
@@ -740,6 +838,8 @@ def test_a_403_to_another_fetch_stops_a_fetch_before_its_retry(
         read_body(SUBMISSIONS, cache(tmp_path))
 
     assert len(edgar.requests) == 1
+    # It opens no connection for the retry, either.
+    assert len(edgar.connections) == 1
     # Its record describes its final attempt.
     [record] = log(tmp_path, SUBMISSIONS)
     assert (record["attempts"], record["status"]) == (1, 503)
