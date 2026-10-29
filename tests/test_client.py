@@ -762,12 +762,27 @@ def test_the_wait_before_a_retry_is_retry_after_in_seconds(
         pytest.param(600, 60, 60, id="capped"),
     ],
 )
+@pytest.mark.parametrize(
+    "form",
+    [
+        pytest.param(lambda when: format_datetime(when, usegmt=True), id="GMT"),
+        # Each of these is in UTC without saying so.
+        pytest.param(lambda when: format_datetime(when.replace(tzinfo=None)), id="-0000"),
+        pytest.param(lambda when: when.ctime(), id="asctime"),
+    ],
+)
 def test_the_wait_before_a_retry_is_retry_after_as_an_http_date(
-    tmp_path: Path, edgar: Edgar, clock: Clock, ahead: int, least: float, most: float
+    tmp_path: Path,
+    edgar: Edgar,
+    clock: Clock,
+    ahead: int,
+    least: float,
+    most: float,
+    form: Callable[[datetime], str],
 ) -> None:
     def reply(request: Request) -> Reply:
         when = datetime.now(UTC) + timedelta(seconds=ahead)
-        return Reply(503, {"Retry-After": format_datetime(when, usegmt=True)})
+        return Reply(503, {"Retry-After": form(when)})
 
     edgar.serve(SUBMISSIONS, reply, Reply(body=A))
 

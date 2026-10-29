@@ -190,7 +190,8 @@ def wait(retry_after: str | None, number: int) -> float:
                 # a timedelta.
                 pass
             else:
-                # An HTTP date is in UTC, which `-0000` leaves unsaid.
+                # An HTTP date is in UTC, which `-0000` and the asctime form
+                # leave unsaid.
                 if when.tzinfo is None:
                     when = when.replace(tzinfo=UTC)
                 seconds = max((when - datetime.now(UTC)).total_seconds(), 0.0)
