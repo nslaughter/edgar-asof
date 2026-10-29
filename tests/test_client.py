@@ -738,6 +738,9 @@ def test_a_fetch_makes_up_to_4_attempts_waiting_2_to_the_power_of_each(
         pytest.param("120", 60, id="capped"),
         pytest.param("1.5", 2, id="not digits"),
         pytest.param("soon", 2, id="neither seconds nor a date"),
+        pytest.param(
+            "Wed, 07 Oct 2026 17:40:13 +9999999999999999", 2, id="a date whose zone overflows"
+        ),
     ],
 )
 def test_the_wait_before_a_retry_is_retry_after_in_seconds(

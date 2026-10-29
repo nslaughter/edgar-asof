@@ -185,7 +185,9 @@ def wait(retry_after: str | None, number: int) -> float:
         else:
             try:
                 when = parsedate_to_datetime(value)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, OverflowError):
+                # Not a date, or one whose zone is too far from UTC to be
+                # a timedelta.
                 pass
             else:
                 # An HTTP date is in UTC, which `-0000` leaves unsaid.
