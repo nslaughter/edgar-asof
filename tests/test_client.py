@@ -1106,6 +1106,14 @@ def test_each_fetch_appends_exactly_one_record_after_the_object_it_names(
         pytest.param(
             "https://data.sec.gov/submissions/a b.json", USER_AGENT, id="a space in the path"
         ),
+        # Each is refused as it's given, rather than requested without its
+        # tab or line break.
+        pytest.param(
+            "https://data.sec.gov/submissions/a\tb.json", USER_AGENT, id="a tab in the path"
+        ),
+        pytest.param(
+            "https://data.sec.gov/submissions/\r\n", USER_AGENT, id="a name that's a line break"
+        ),
         pytest.param(f"{FURTHER}é", USER_AGENT, id="a path that isn't ASCII"),
         pytest.param(SUBMISSIONS, f"{USER_AGENT}\r\nX-Other: 1", id="a header split in two"),
     ],

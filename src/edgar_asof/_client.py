@@ -25,7 +25,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from typing import Any
-from urllib.parse import urlsplit
 
 from edgar_asof import _cache
 from edgar_asof._errors import ForbiddenError
@@ -213,15 +212,17 @@ def attempt(
     # No connection opens after a 403, either.
     if PACER.forbidden:
         return None
-    parts = urlsplit(writer.url)
-    assert parts.hostname is not None
+    # The URL is a feed's (READ-4), so it's https on one of CLIENT-1's hosts,
+    # and its path is the rest of it, sent as it's given. Parsing it would
+    # drop a tab or a line break from the path, which http.client refuses.
+    host, _, path = writer.url.removeprefix("https://").partition("/")
     tried = Attempt(datetime.now(UTC))
-    connection = connect(parts.hostname, TIMEOUT)
+    connection = connect(host, TIMEOUT)
     try:
         # Putting the request checks it, and sends nothing until the end of
         # its headers.
-        connection.putrequest("GET", parts.path, skip_host=True, skip_accept_encoding=True)
-        for name, value in ({"Host": parts.hostname} | headers).items():
+        connection.putrequest("GET", f"/{path}", skip_host=True, skip_accept_encoding=True)
+        for name, value in ({"Host": host} | headers).items():
             connection.putheader(name, value)
         try:
             # The connection opens first, and the request is sent when its
