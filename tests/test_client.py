@@ -324,8 +324,13 @@ def slow_to_open(monkeypatch: pytest.MonkeyPatch, host: str) -> SlowToOpen:
     return slow
 
 
-def reading(url: str, source: Cache) -> tuple[threading.Thread, list[Body | Exception]]:
-    """A thread that reads a URL, and what the read returns or raises, once it has."""
+def reading(
+    url: str, source: Cache, done: threading.Event | None = None
+) -> tuple[threading.Thread, list[Body | Exception]]:
+    """A thread that reads a URL, and what the read returns or raises, once it has.
+
+    It sets `done`, if given, once the read returns or raises.
+    """
     outcome: list[Body | Exception] = []
 
     def read() -> None:
@@ -333,8 +338,54 @@ def reading(url: str, source: Cache) -> tuple[threading.Thread, list[Body | Exce
             outcome.append(read_body(url, source))
         except Exception as err:
             outcome.append(err)
+        if done is not None:
+            done.set()
 
     return threading.Thread(target=read), outcome
+
+
+def sending(
+    monkeypatch: pytest.MonkeyPatch, clock: Clock, holds: dict[str, Callable[[], None]]
+) -> list[tuple[str, float]]:
+    """Each request's host, and when it's sent by the test's clock, as the client sends them.
+
+    A request to a host in `holds` runs the host's hold first, after its
+    turn comes and before it's sent.
+    """
+    sent: list[tuple[str, float]] = []
+    local = _client.connect
+
+    def connect(to: str, timeout: float) -> http.client.HTTPConnection:
+        connection = local(to, timeout)
+        ends = connection.endheaders
+
+        def endheaders(*args: Any, **kwargs: Any) -> None:
+            if to in holds:
+                holds[to]()
+            sent.append((to, clock.time()))
+            ends(*args, **kwargs)
+
+        monkeypatch.setattr(connection, "endheaders", endheaders)
+        return connection
+
+    monkeypatch.setattr(_client, "connect", connect)
+    return sent
+
+
+@dataclass
+class Contended:
+    """A lock that sets an event when a thread finds it taken, and then waits for it."""
+
+    lock: Any
+    waits: threading.Event
+
+    def __enter__(self) -> None:
+        if not self.lock.acquire(blocking=False):
+            self.waits.set()
+            self.lock.acquire()
+
+    def __exit__(self, *exc: object) -> None:
+        self.lock.release()
 
 
 # Requests
@@ -689,6 +740,67 @@ def test_a_request_whose_connection_opens_after_a_403_isnt_sent(
     assert edgar.urls() == [COMPANYFACTS]
     # It made no attempt, so it appended no record.
     assert log(tmp_path / "one", HEADER) == []
+
+
+@pytest.mark.spec("CLIENT-7")
+def test_the_next_request_starts_0_2_seconds_after_a_held_request_is_sent(
+    tmp_path: Path, edgar: Edgar, clock: Clock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_client, "PACER", _client.Pacer(clock=clock.time, sleep=clock.sleep))
+    # After its turn comes, the header's request is held for a second by the
+    # test's clock before it's sent, as if its thread had paused.
+    sent = sending(monkeypatch, clock, {"www.sec.gov": lambda: clock.sleep(1)})
+    edgar.serve(HEADER, Reply(body=A))
+    edgar.serve(COMPANYFACTS, Reply(body=B))
+
+    read_body(HEADER, cache(tmp_path / "one"))
+    read_body(COMPANYFACTS, cache(tmp_path / "two"))
+
+    assert [host for host, _ in sent] == ["www.sec.gov", "data.sec.gov"]
+    assert [at for _, at in sent] == pytest.approx([1, 1.2])
+
+
+@pytest.mark.spec("CLIENT-7", "CLIENT-9")
+def test_a_request_held_after_its_turn_comes_is_sent_before_another_starts(
+    tmp_path: Path, edgar: Edgar, clock: Clock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pacer = _client.Pacer(clock=clock.time, sleep=clock.sleep)
+    # Set when the other fetch has received its 403, or waits for its turn.
+    moved = threading.Event()
+    monkeypatch.setattr(pacer, "lock", Contended(pacer.lock, moved))
+    monkeypatch.setattr(_client, "PACER", pacer)
+    held = threading.Event()
+    let = threading.Event()
+
+    def hold() -> None:
+        held.set()
+        let.wait(timeout=30)
+
+    sent = sending(monkeypatch, clock, {"www.sec.gov": hold})
+    edgar.serve(HEADER, Reply(body=A))
+    edgar.serve(COMPANYFACTS, Reply(403))
+    reader, outcome = reading(HEADER, cache(tmp_path / "one"))
+    other, raised = reading(COMPANYFACTS, cache(tmp_path / "two"), done=moved)
+
+    reader.start()
+    assert held.wait(timeout=30)
+    # After the header's turn comes, and before its request is sent, another
+    # fetch requests a URL.
+    other.start()
+    assert moved.wait(timeout=30)
+    let.set()
+    reader.join(timeout=30)
+    other.join(timeout=30)
+
+    # The header's request was sent first, and the other 0.2 seconds after
+    # it by the test's clock, which received the 403.
+    assert [host for host, _ in sent] == ["www.sec.gov", "data.sec.gov"]
+    assert [at for _, at in sent] == pytest.approx([0, 0.2])
+    assert edgar.urls() == [HEADER, COMPANYFACTS]
+    assert outcome == [Body(HEADER, sha(A), A)]
+    [error] = raised
+    assert isinstance(error, ForbiddenError)
+    assert error.url == COMPANYFACTS
 
 
 @pytest.mark.spec("CLIENT-8")

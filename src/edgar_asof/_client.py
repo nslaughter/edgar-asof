@@ -64,10 +64,10 @@ def connect(host: str, timeout: float) -> http.client.HTTPConnection:
 
 
 class Pacer:
-    """When the process's requests may start: at least `interval` seconds apart (CLIENT-7).
+    """Sends the process's requests, one at a time, at least `interval` seconds apart (CLIENT-7).
 
-    One pacer serves every cache the process fetches into. After a 403,
-    it lets no request start (CLIENT-9).
+    One pacer serves every cache the process fetches into. Once a 403 is
+    recorded, it sends no request (CLIENT-9).
     """
 
     def __init__(
@@ -81,20 +81,41 @@ class Pacer:
         self.clock = clock
         self.sleep = sleep
         self.forbidden = False
+        # Held while a request waits for its turn and is sent.
         self.lock = threading.Lock()
+        # Held while a request is sent, and while a 403 is recorded, so that
+        # each request is sent before a 403 is recorded, or not at all. A
+        # request waiting for its turn doesn't hold it, so a 403 isn't
+        # recorded late.
+        self.sending = threading.Lock()
+        # When the last request's sending ended.
         self.last = -math.inf
 
-    def start(self) -> bool:
-        """Wait until a request may start, and count it as started; or False after a 403."""
+    def send(self, request: Callable[[], None]) -> bool:
+        """Send a request when its turn comes, and return True; or send nothing after a 403.
+
+        `request` sends it. The next request's turn comes `interval` seconds
+        after `request` returns or raises, since its bytes may have gone out
+        either way.
+        """
         with self.lock:
             delay = self.last + self.interval - self.clock()
             if delay > 0:
                 self.sleep(delay)
-            # A request that was already sent may have received a 403 meanwhile.
-            if self.forbidden:
-                return False
-            self.last = self.clock()
+            with self.sending:
+                # A request that was already sent may have received a 403 meanwhile.
+                if self.forbidden:
+                    return False
+                try:
+                    request()
+                finally:
+                    self.last = self.clock()
             return True
+
+    def forbid(self) -> None:
+        """Record a 403, once any request being sent is sent; no request is sent after it."""
+        with self.sending:
+            self.forbidden = True
 
 
 PACER = Pacer()
@@ -206,11 +227,10 @@ def attempt(
 ) -> Attempt | None:
     """Request the writer's URL once, and store the body of a 200.
 
-    The request starts when the pacer lets it, once its connection is open,
-    and is sent then (CLIENT-7). Returns None, having sent nothing, after a
-    403 to a fetch in the process (CLIENT-9). A request line or header that
-    http.client refuses, which sends nothing, raises its error, and isn't
-    an attempt.
+    The pacer sends the request in its turn, once its connection is open
+    (CLIENT-7). Returns None, having sent nothing, after a 403 to a fetch in
+    the process (CLIENT-9). A request line or header that http.client
+    refuses, which sends nothing, raises its error, and isn't an attempt.
     """
     # No connection opens after a 403, either.
     if PACER.forbidden:
@@ -221,6 +241,12 @@ def attempt(
     host, _, path = writer.url.removeprefix("https://").partition("/")
     tried = Attempt(datetime.now(UTC))
     connection = connect(host, TIMEOUT)
+
+    def send() -> None:
+        # A record's requested_at is when its attempt was sent.
+        tried.requested_at = datetime.now(UTC)
+        connection.endheaders()
+
     try:
         # Putting the request checks it, and sends nothing until the end of
         # its headers.
@@ -228,16 +254,14 @@ def attempt(
         for name, value in ({"Host": host} | headers).items():
             connection.putheader(name, value)
         try:
-            # The connection opens first, and the request is sent when its
-            # turn comes, so that one slow to open sends nothing less than
-            # the interval after another request, or after a 403 that
-            # another received meanwhile.
+            # The connection opens first, and the pacer sends the request
+            # when its turn comes, holding the turn until it's sent, so that
+            # no request is sent less than the interval after another, or
+            # after a 403 that another received meanwhile, however long
+            # this one takes to open or to send.
             connection.connect()
-            if not PACER.start():
+            if not PACER.send(send):
                 return None
-            # A record's requested_at is when its attempt was sent.
-            tried.requested_at = datetime.now(UTC)
-            connection.endheaders()
             response = connection.getresponse()
         except (OSError, http.client.HTTPException) as err:
             tried.error = f"no response: {err!r}"
@@ -265,7 +289,7 @@ def attempt(
             tried.stored = named
         elif response.status == 403:
             # CLIENT-9: the SEC returns it to clients over its limit.
-            PACER.forbidden = True
+            PACER.forbid()
         elif response.status in RETRIED:
             tried.retry = wait(response.getheader("Retry-After"), number)
         return tried
