@@ -159,6 +159,16 @@ class Stored:
     size: int
 
 
+def refuse_snapshot_store(directory: Path, url: str) -> None:
+    """Raise SnapshotStoreError if the directory holds a `scope.json` (CACHE-5)."""
+    if (directory / "scope.json").exists(follow_symlinks=False):
+        raise SnapshotStoreError(
+            url,
+            f"{directory} holds a scope.json, so it's a snapshot store, "
+            "which edgar-asof never fetches into",
+        )
+
+
 @contextlib.contextmanager
 def writing(directory: Path, url: str) -> Iterator[Writer]:
     """Hold the cache's lock while the URL is fetched into it, and give the fetch its writer.
@@ -168,12 +178,7 @@ def writing(directory: Path, url: str) -> Iterator[Writer]:
     directory, with its parents (READ-5), and then waits while another
     process holds the lock (CACHE-6).
     """
-    if (directory / "scope.json").exists(follow_symlinks=False):
-        raise SnapshotStoreError(
-            url,
-            f"{directory} holds a scope.json, so it's a snapshot store, "
-            "which edgar-asof never fetches into",
-        )
+    refuse_snapshot_store(directory, url)
     directory.mkdir(parents=True, exist_ok=True)
     # fcntl is POSIX's. It's imported where a fetch needs it, so that the
     # package, and a read, work without it.
