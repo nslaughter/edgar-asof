@@ -29,10 +29,10 @@ STATEMENT = re.compile(r"^- \*\*([A-Z]+-\d+)\*\* \((invariant|rule)\)", re.M)
 # A task's row in docs/plan.md, with its last column, Done.
 PLAN_ROW = re.compile(r"^\| (T\d+) \|.*\|([^|]*)\|$", re.M)
 # Statements whose tests a later task in docs/plan.md writes, with that task,
-# as the plan's rows give them: T7 acceptance times, and T8 facts. A task
-# that writes a statement's tests takes it off this list. Strict, like
-# xfail_strict: a statement listed here that has a test fails too, and so
-# does one whose task the plan marks done.
+# as the plan's rows give them: T8 facts. A task that writes a statement's
+# tests takes it off this list. Strict, like xfail_strict: a statement
+# listed here that has a test fails too, and so does one whose task the
+# plan marks done.
 AWAITING = {
     **dict.fromkeys(
         [
@@ -40,19 +40,6 @@ AWAITING = {
             "TIME-2",
             "TIME-3",
             "TIME-4",
-            "TIME-5",
-            "TIME-6",
-            "TIME-7",
-            "TIME-8",
-            "TIME-10",
-            "TIME-11",
-            "TIME-12",
-            "TIME-15",
-        ],
-        "T7",
-    ),
-    **dict.fromkeys(
-        [
             "FACT-1",
             "FACT-2",
             "FACT-3",
