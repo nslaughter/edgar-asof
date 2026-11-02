@@ -1,7 +1,8 @@
 # Plan: edgar-asof
 
-**Status:** October 28, 2026. T1 to T6 and T14 are done. The next is
-T7, acceptance times.
+**Status:** November 2, 2026. T1 to T7 and T14 are done. The next is
+T8, facts, which waits for a finding in `edgar-data-pipeline` that records
+the feeds' layout.
 
 The tasks that build `edgar-asof`, in the order they're to be done, and
 which are done. When the owner asks for the next item, an agent takes the
@@ -54,8 +55,8 @@ say, with tests that carry their IDs.
 | T4 | **The project.** The `uv` project for the `edgar-asof` package, with a format check, a lint, a type check, and tests, run on each pull request, as `edgar-data-pipeline` has. Tests carry the `spec` marker, and a guard fails any test that reaches the network ([`AGENTS.md`](../AGENTS.md#rules)). `tests/test_spec_coverage.py` fails if a statement in an index has no test, unless a later task here writes it, as T2 allows, or if a marker names no statement, as `edgar-data-pipeline`'s does. It fills in [`AGENTS.md`'s commands](../AGENTS.md#commands). | T2 | October 15, 2026: every statement's tests await T5 to T8 |
 | T5 | **The cache.** [CACHE-1] to [CACHE-7], [CACHE-9], and [CACHE-10]: writing objects and records, under the lock ([CACHE-6]) and never into a snapshot store ([CACHE-5]), and reading a cache, or a store as one. And [READ-1] to [READ-4]: the functions and types of reading, reading a cache without a fetch, and reading bodies the caller gives. Tested on temporary directories, and on stored versions laid out as a snapshot store. | T2, T4 | October 19, 2026: a read that would fetch raises `NotImplementedError` until T6 |
 | T6 | **The client.** [CLIENT-1] to [CLIENT-16], and reads that fetch into the cache, and the errors they raise ([CACHE-8], [READ-5], [READ-6]), with the lock and the refusal to fetch into a store tested through a fetch, as [READ-5] and [READ-6] give them, where T5 tests [CACHE-5] and [CACHE-6] without one. Tested against a local server that stands in for EDGAR. | T5 | October 28, 2026 |
-| T7 | **Acceptance times.** [TIME-1] to [TIME-8], [TIME-10] to [TIME-12], and [TIME-15]: raw times from headers and `submissions`, cached or given, and the two interpreters, with their types. | T3, T5 | |
-| T8 | **Facts.** `spec/facts.md`'s statements, from `companyfacts` and `submissions`, cached or given, and `spec/times.md`'s [TIME-9], [TIME-13], and [TIME-14], which a caller meets only through a read of facts and its answers. It waits for a finding that records the parts of the feeds' layout that no finding records yet, which the owner deferred until T8 on October 14, 2026 ([`spec/facts.md`'s open question 2](../spec/facts.md#10-open-questions)). | T1, T7, T14, and a finding in `edgar-data-pipeline` that records the feeds' layout | |
+| T7 | **Acceptance times.** [TIME-5] to [TIME-8], [TIME-10] to [TIME-12], and [TIME-15]: raw times and the two interpreters, with their types. Reading raw times from headers and `submissions`, cached or given ([TIME-1] to [TIME-4]), moved to T8, as the owner decided on November 2, 2026, since no finding yet records where a header gives its `ACCEPTANCE-DATETIME`, or the column `accessionNumber`, which names each filing of a list. | T3, T5 | November 2, 2026: reading raw times moved to T8 |
+| T8 | **Facts.** `spec/facts.md`'s statements, from `companyfacts` and `submissions`, cached or given; `spec/times.md`'s [TIME-1] to [TIME-4], reading raw times from headers and `submissions`, cached or given, which the owner moved here from T7 on November 2, 2026; and its [TIME-9], [TIME-13], and [TIME-14], which a caller meets only through a read of facts and its answers. It waits for a finding that records the parts of the feeds' layout that no finding records yet, which the owner deferred until T8 on October 14, 2026 ([`spec/facts.md`'s open question 2](../spec/facts.md#10-open-questions)), and where a header gives its `ACCEPTANCE-DATETIME`. [SRC-1] records the field but not where it is, and each of the eight stored headers gives it twice: in an HTML comment, and inside `<PRE>`. | T1, T7, T14, and a finding in `edgar-data-pipeline` that records the feeds' layout, the headers' among it | |
 | T13 | **The documentation site.** A site for the people who use the library, built with Zensical, as the owner chose on October 13, 2026: how to install it and read what a company reported as of a time, through an interpreter of acceptance times ([TIME-9]), and the functions and types a caller uses, as T1 to T3 name them. It publishes the specifications and the decision records too, built from where they are, so their paths and links still hold ([`AGENTS.md`](../AGENTS.md#where-documents-go)), and the task adds to that section where the site's own pages go: they hold the full account of how to use the library, and the README a short one that links to them (T9). A decision record gives the owner's choice of Zensical, and settles how the site documents the functions and types: from the specifications, or from the package's docstrings. The site cites the U.S. Securities and Exchange Commission's EDGAR system as the data's source ([`AGENTS.md`](../AGENTS.md#rules)), pins its generator, and has a CI job that builds it and checks its links. The check sends no request to the SEC, which [`AGENTS.md`'s rules](../AGENTS.md#rules) allow only when the owner asks for that run. It's first published with T9's release, so its instructions work once it's live, on GitHub Pages, from this repository, as the owner decided on October 14, 2026. The owner had Pages enabled on October 14, 2026, with GitHub Actions as its source, and its `github-pages` environment deploys only from `main`. So T13 adds a workflow that publishes the site, at `https://nslaughter.github.io/edgar-asof/`, only when it's run by hand from `main`: merging T13 publishes nothing, and T9 runs it. | T6, T8 | |
 | T9 | **Release 0.1.0.** The package's metadata, the README's short account of how to use it, which links to the site's pages for the rest, and its publication on PyPI as `edgar-asof`. Once the package is on PyPI, T9 runs T13's workflow, which publishes the documentation site for the first time. The PyPI account, and how releases are published to it, are the owner's. | T6, T8, T13, owner | |
 
@@ -72,6 +73,7 @@ After the first release, so each task here waits for T9.
 [0009]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/docs/decisions/0009-read-edgar-through-a-public-point-in-time-library.md
 [store-ids]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/spec/snapshots.md#3-statement-ids
 [FETCH-18]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/spec/snapshots.md#the-fetcher
+[SRC-1]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-2]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-6]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
 [SRC-12]: https://github.com/nslaughter/edgar-data-pipeline/blob/main/investigation/edgar.md#findings-so-far
@@ -99,6 +101,8 @@ After the first release, so each task here waits for T9.
 [READ-6]: ../spec/fetching.md#8-functions-and-types
 [TIME-1]: ../spec/times.md#3-raw-times
 [TIME-3]: ../spec/times.md#3-raw-times
+[TIME-4]: ../spec/times.md#3-raw-times
+[TIME-5]: ../spec/times.md#3-raw-times
 [TIME-6]: ../spec/times.md#4-interpreters
 [TIME-8]: ../spec/times.md#4-interpreters
 [TIME-9]: ../spec/times.md#4-interpreters
