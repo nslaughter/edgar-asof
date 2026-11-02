@@ -157,6 +157,9 @@ def test_submissions_utc_reads_the_instant_stated_in_utc_to_the_millisecond(
 def test_submissions_utc_gives_nothing_for_a_filing_without_a_submissions_time() -> None:
     assert submissions_utc(ACCESSION, ()) is None
     assert submissions_utc(ACCESSION, (header("20251031060126"),)) is None
+    # Nothing, too, for a header time in `submissions`' form, which a
+    # caller's RawTime can hold (TIME-11): it reads only `submissions`'.
+    assert submissions_utc(ACCESSION, (header("2025-10-31T14:01:26.000Z"),)) is None
 
 
 @pytest.mark.spec("TIME-10")
@@ -258,6 +261,9 @@ def test_header_in_zone_gives_nothing_for_a_filing_without_a_header_time() -> No
 
     assert interpreter(ACCESSION, ()) is None
     assert interpreter(ACCESSION, (submissions("2025-10-31T14:01:26.000Z"),)) is None
+    # Nothing, too, for a `submissions` time in the header's form, which a
+    # caller's RawTime can hold: it reads only the header's.
+    assert interpreter(ACCESSION, (submissions("20251031060126"),)) is None
 
 
 @pytest.mark.spec("TIME-8")
