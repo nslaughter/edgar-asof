@@ -98,11 +98,23 @@ class HeaderInZone:
     """An interpreter: the header's digits, as local time in a zone (TIME-8, TIME-11).
 
     It's equal to another, with the same hash, only for the same `zone`, as
-    given (TIME-12).
+    given (TIME-12). It resolves `zone` whenever one is made, by
+    `header_in_zone` or by `dataclasses.replace`, so two that are equal
+    read the same instants.
     """
 
     zone: str
-    tzinfo: zoneinfo.ZoneInfo = field(compare=False)
+    tzinfo: zoneinfo.ZoneInfo = field(init=False, compare=False)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.zone, str):
+            raise TypeError(f"a zone is a time zone's IANA name, a str, not {self.zone!r}")
+        try:
+            tzinfo = zoneinfo.ZoneInfo(self.zone)
+        except (zoneinfo.ZoneInfoNotFoundError, ValueError) as err:
+            raise ValueError(f"no time zone found named {self.zone!r}") from err
+        # A frozen dataclass sets its own fields only through object's.
+        object.__setattr__(self, "tzinfo", tzinfo)
 
     def __call__(self, accession_number: str, raw_times: tuple[RawTime, ...]) -> datetime | None:
         raw_time = given(accession_number, raw_times).get("header")
@@ -141,10 +153,4 @@ def header_in_zone(zone: str) -> HeaderInZone:
     ValueError for a zone that zoneinfo can't find (TIME-15), and
     TypeError for one that isn't a str.
     """
-    if not isinstance(zone, str):
-        raise TypeError(f"a zone is a time zone's IANA name, a str, not {zone!r}")
-    try:
-        tzinfo = zoneinfo.ZoneInfo(zone)
-    except (zoneinfo.ZoneInfoNotFoundError, ValueError) as err:
-        raise ValueError(f"no time zone found named {zone!r}") from err
-    return HeaderInZone(zone, tzinfo)
+    return HeaderInZone(zone)

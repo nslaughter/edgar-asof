@@ -440,6 +440,18 @@ def test_header_in_zone_gives_equal_interpreters_only_for_the_same_zone_as_given
 
 
 @pytest.mark.spec("TIME-12")
+def test_an_interpreter_equal_to_another_reads_the_same_instants() -> None:
+    # dataclasses.replace makes a frozen dataclass's instance with another
+    # field, as copy.replace does from Python 3.13.
+    replaced = dataclasses.replace(header_in_zone(NEW_YORK), zone="Asia/Tokyo")
+    raw_times = (header("20251031060126"),)
+
+    assert replaced == header_in_zone("Asia/Tokyo")
+    # 6:01:26 a.m. in Tokyo, 9 hours ahead of UTC.
+    assert replaced(ACCESSION, raw_times) == at(2025, 10, 30, 21, 1, 26)
+
+
+@pytest.mark.spec("TIME-12")
 def test_header_in_zone_doesnt_resolve_a_zone_the_database_links_to_another(alias: str) -> None:
     interpreter = header_in_zone(alias)
     raw_times = (header("20251031060126"),)
