@@ -426,9 +426,13 @@ def test_a_raw_time_is_immutable_hashable_and_equal_only_with_the_same_fields() 
 @pytest.mark.spec("TIME-12")
 def test_header_in_zone_gives_equal_interpreters_only_for_the_same_zone_as_given() -> None:
     interpreter = header_in_zone(NEW_YORK)
+    # zoneinfo caches each zone it finds, so without this the two would
+    # hold the same ZoneInfo, which is equal only to itself.
+    zoneinfo.ZoneInfo.clear_cache()
+    same = header_in_zone(NEW_YORK)
 
-    assert interpreter == header_in_zone(NEW_YORK)
-    assert hash(interpreter) == hash(header_in_zone(NEW_YORK))
+    assert interpreter == same
+    assert hash(interpreter) == hash(same)
     assert header_in_zone("Asia/Tokyo") != interpreter
     assert interpreter != NEW_YORK  # type: ignore[comparison-overlap]
     assert interpreter != submissions_utc
