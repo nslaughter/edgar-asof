@@ -34,23 +34,7 @@ PLAN_ROW = re.compile(r"^\| (T\d+) \|.*\|([^|]*)\|$", re.M)
 # xfail_strict: a statement listed here that has a test fails too, and so
 # does one whose task the plan marks done.
 AWAITING = {
-    **dict.fromkeys(
-        [
-            "TIME-1",
-            "TIME-2",
-            "TIME-3",
-            "TIME-4",
-            "TIME-5",
-            "TIME-6",
-            "TIME-7",
-            "TIME-8",
-            "TIME-10",
-            "TIME-11",
-            "TIME-12",
-            "TIME-15",
-        ],
-        "T7",
-    ),
+    **dict.fromkeys(["TIME-1", "TIME-2", "TIME-3", "TIME-4"], "T7"),
     **dict.fromkeys(
         [
             "FACT-1",
