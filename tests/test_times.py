@@ -12,8 +12,11 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import inspect
-from collections.abc import Callable
+import shutil
+import zoneinfo
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
@@ -41,6 +44,31 @@ def header(text: object, accession_number: str = ACCESSION) -> RawTime:
 
 def submissions(text: object, accession_number: str = ACCESSION) -> RawTime:
     return RawTime("submissions", text, accession_number, SUBMISSIONS_BODY)  # type: ignore[arg-type]
+
+
+@pytest.fixture
+def alias(tmp_path: Path) -> Iterator[str]:
+    """US/Eastern, a name that the time zone database links to America/New_York.
+
+    Some systems' databases leave out such legacy names, as Ubuntu 26.04's
+    does, so the test's own database holds both, each with the system's
+    America/New_York.
+    """
+    found = next(
+        Path(directory) / NEW_YORK
+        for directory in zoneinfo.TZPATH
+        if (Path(directory) / NEW_YORK).is_file()
+    )
+    for name in (NEW_YORK, "US/Eastern"):
+        (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(found, tmp_path / name)
+    zoneinfo.reset_tzpath(to=[str(tmp_path)])
+    zoneinfo.ZoneInfo.clear_cache()
+    try:
+        yield "US/Eastern"
+    finally:
+        zoneinfo.reset_tzpath()
+        zoneinfo.ZoneInfo.clear_cache()
 
 
 def at(
@@ -395,13 +423,23 @@ def test_header_in_zone_gives_equal_interpreters_only_for_the_same_zone_as_given
 
     assert interpreter == header_in_zone(NEW_YORK)
     assert hash(interpreter) == hash(header_in_zone(NEW_YORK))
-    # The time zone database makes US/Eastern an alias of America/New_York,
-    # but zones aren't resolved.
-    assert header_in_zone("US/Eastern") != interpreter
     assert header_in_zone("Asia/Tokyo") != interpreter
     assert interpreter != NEW_YORK  # type: ignore[comparison-overlap]
     assert interpreter != submissions_utc
-    assert len({interpreter, header_in_zone(NEW_YORK), header_in_zone("US/Eastern")}) == 2
+    assert len({interpreter, header_in_zone(NEW_YORK), header_in_zone("Asia/Tokyo")}) == 2
+
+
+@pytest.mark.spec("TIME-12")
+def test_header_in_zone_doesnt_resolve_a_zone_the_database_links_to_another(alias: str) -> None:
+    interpreter = header_in_zone(alias)
+    raw_times = (header("20251031060126"),)
+
+    # The same zone, by another name.
+    assert interpreter(ACCESSION, raw_times) == header_in_zone(NEW_YORK)(ACCESSION, raw_times)
+    assert interpreter != header_in_zone(NEW_YORK)
+    assert interpreter == header_in_zone(alias)
+    assert len({interpreter, header_in_zone(NEW_YORK), header_in_zone(alias)}) == 2
+    assert repr(interpreter) == "header_in_zone('US/Eastern')"
 
 
 @pytest.mark.spec("TIME-12")
@@ -417,7 +455,7 @@ def test_an_interpreter_header_in_zone_gives_is_immutable() -> None:
 @pytest.mark.spec("TIME-12")
 def test_each_of_the_librarys_interpreters_has_a_repr_that_names_it() -> None:
     assert repr(header_in_zone(NEW_YORK)) == "header_in_zone('America/New_York')"
-    assert repr(header_in_zone("US/Eastern")) == "header_in_zone('US/Eastern')"
+    assert repr(header_in_zone("Asia/Tokyo")) == "header_in_zone('Asia/Tokyo')"
     assert "submissions_utc" in repr(submissions_utc)
 
 
